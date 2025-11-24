@@ -1,9 +1,9 @@
 import { ThumbsDown, ThumbsUp, UserPlus } from "lucide-react";
-import Image from "next/image";
 import { VideoCard } from "~/app/_components/VideoCard";
+import { AspectRatio } from "~/components/ui/aspect-ratio";
 import { Avatar, AvatarFallback } from "~/components/ui/avatar";
-import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
+import { VimoExample } from "./_components/video";
 
 export default async function VideoPage({
   params,
@@ -15,17 +15,12 @@ export default async function VideoPage({
   return (
     <main>
       <div className="container mx-auto max-w-7xl space-y-3 px-6 py-12">
-        <h1 className="font-bold text-2xl">{id}</h1>
-
         <div className="flex gap-6">
           <div className="grow space-y-6">
-            <Image
-              alt="Video"
-              className="w-full"
-              height={400}
-              src="https://placehold.co/600x400.webp"
-              width={600}
-            />
+            <AspectRatio ratio={16 / 9}>
+              <VimoExample />
+            </AspectRatio>
+
             <div>
               <h2 className="mb-0 pb-0 font-bold text-xl">Some title</h2>
               <div className="flex items-center gap-4 text-muted-foreground text-sm">
@@ -100,7 +95,7 @@ export default async function VideoPage({
                 <VideoCard />
                 <VideoCard />
                 <VideoCard />
-                <VideoCard />
+                <VideoCard /> <VideoCard /> <VideoCard /> <VideoCard />
               </div>
             </section>
           </div>
@@ -108,7 +103,7 @@ export default async function VideoPage({
           <div className="w-[300px] shrink-0 space-y-3">
             <VideoCard />
             <VideoCard />
-            <VideoCard />
+            <VideoCard /> <VideoCard /> <VideoCard />
           </div>
         </div>
       </div>
