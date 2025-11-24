@@ -1,9 +1,11 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"transcoder/pkg/config"
+	"transcoder/pkg/db"
 )
 
 func main() {
@@ -12,5 +14,12 @@ func main() {
 		log.Fatal(err)
 	}
 
-	fmt.Println(cfg.DatabaseURL)
+	ctx := context.Background()
+	sqlDB, err := db.Open(ctx, cfg.DatabaseURL)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer sqlDB.Close()
+
+	fmt.Println("database: connected")
 }
