@@ -6,10 +6,6 @@ import "./src/env.js";
 
 /** @type {import("next").NextConfig} */
 const config = {
-  webp: {
-    preset: "default",
-    quality: 100,
-  },
   images: {
     remotePatterns: [
       {

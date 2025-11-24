@@ -1,0 +1,15 @@
+{
+  "editor.formatOnSave": true,
+
+  // Use Biome for these languages
+  "[javascript]": { "editor.defaultFormatter": "biomejs.biome" },
+  "[typescript]": { "editor.defaultFormatter": "biomejs.biome" },
+  "[javascriptreact]": { "editor.defaultFormatter": "biomejs.biome" },
+  "[typescriptreact]": { "editor.defaultFormatter": "biomejs.biome" },
+  "[json]": { "editor.defaultFormatter": "biomejs.biome" },
+  "[jsonc]": { "editor.defaultFormatter": "biomejs.biome" },
+
+  // Prefer Biome over other formatters
+  "prettier.enable": false,
+  "eslint.format.enable": false
+}

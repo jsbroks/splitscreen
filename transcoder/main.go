@@ -1,7 +1,16 @@
 package main
 
-import "fmt"
+import (
+	"fmt"
+	"log"
+	"transcoder/pkg/config"
+)
 
 func main() {
-	fmt.Println("Hello, World!")
+	cfg, err := config.Load()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	fmt.Println(cfg.DatabaseURL)
 }
