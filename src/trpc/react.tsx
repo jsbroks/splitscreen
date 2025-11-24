@@ -1,11 +1,8 @@
 "use client";
 
 import { type QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import {
-  httpBatchStreamLink,
-  loggerLink,
-} from "node_modules/.pnpm/@trpc+client@11.7.2_@trpc+server@11.7.2_typescript@5.9.3__typescript@5.9.3/node_modules/@trpc/client/dist/TRPCUntypedClient";
-import { createTRPCReact } from "node_modules/.pnpm/@trpc+react-query@11.7.2_@tanstack+react-query@5.90.10_react@19.2.0__@trpc+client@11.7._4c8c2afb40f1bad63fcfbe2029c1f10e/node_modules/@trpc/react-query/dist/createUtilityFunctions";
+import { httpBatchStreamLink } from "@trpc/client";
+import { createTRPCReact } from "@trpc/react-query";
 import type { inferRouterInputs, inferRouterOutputs } from "@trpc/server";
 import { useState } from "react";
 import SuperJSON from "superjson";
@@ -47,11 +44,6 @@ export function TRPCReactProvider(props: { children: React.ReactNode }) {
   const [trpcClient] = useState(() =>
     api.createClient({
       links: [
-        loggerLink({
-          enabled: (op) =>
-            process.env.NODE_ENV === "development" ||
-            (op.direction === "down" && op.result instanceof Error),
-        }),
         httpBatchStreamLink({
           transformer: SuperJSON,
           url: `${getBaseUrl()}/api/trpc`,
@@ -62,7 +54,7 @@ export function TRPCReactProvider(props: { children: React.ReactNode }) {
           },
         }),
       ],
-    })
+    }),
   );
 
   return (
