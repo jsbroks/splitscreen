@@ -8,12 +8,12 @@ import (
 
 // VTTBuilder builds a WebVTT file that references regions within a sprite image.
 type VTTBuilder struct {
-	lines         []string
+	lines          []string
 	spriteBasename string
-	cols          int
-	rows          int
-	thumbW        int
-	thumbH        int
+	cols           int
+	rows           int
+	thumbW         int
+	thumbH         int
 }
 
 func NewVTT() *VTTBuilder {
@@ -113,5 +113,3 @@ func ceil(v float64) float64 {
 	}
 	return float64(i + 1)
 }
-
-

@@ -13,5 +13,3 @@ func TestFilterChain_String(t *testing.T) {
 		t.Fatalf("unexpected filter chain: got %q want %q", got, want)
 	}
 }
-
-

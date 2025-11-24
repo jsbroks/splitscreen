@@ -13,5 +13,3 @@ type Syncer interface {
 	// UploadFile uploads a single file at localPath to s3://bucket/key.
 	UploadFile(ctx context.Context, localPath string, bucket string, key string) error
 }
-
-

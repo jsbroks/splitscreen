@@ -33,5 +33,3 @@ func TestMasterBuilder_AddVariantAndString(t *testing.T) {
 		t.Errorf("output should end with newline")
 	}
 }
-
-

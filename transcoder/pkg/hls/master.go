@@ -9,15 +9,15 @@ import (
 
 // StreamInfAttr holds attributes for EXT-X-STREAM-INF line in a master playlist.
 type StreamInfAttr struct {
-	Bandwidth       int     // bits per second (required by spec)
-	AverageBandwidth int    // optional, bits per second
-	ResolutionW     int     // e.g., 1280
-	ResolutionH     int     // e.g., 720
-	FrameRate       float64 // e.g., 29.97
-	Codecs          string  // e.g., "avc1.64001f,mp4a.40.2"
-	Audio           string  // GROUP-ID for associated audio Renditions
-	Subtitles       string  // GROUP-ID for associated subtitles Renditions
-	ClosedCaptions  string  // "NONE" or GROUP-ID
+	Bandwidth        int     // bits per second (required by spec)
+	AverageBandwidth int     // optional, bits per second
+	ResolutionW      int     // e.g., 1280
+	ResolutionH      int     // e.g., 720
+	FrameRate        float64 // e.g., 29.97
+	Codecs           string  // e.g., "avc1.64001f,mp4a.40.2"
+	Audio            string  // GROUP-ID for associated audio Renditions
+	Subtitles        string  // GROUP-ID for associated subtitles Renditions
+	ClosedCaptions   string  // "NONE" or GROUP-ID
 }
 
 // MasterBuilder is a fluent builder for HLS master playlists.
@@ -101,5 +101,3 @@ func trimFloat(v float64, prec int) string {
 	}
 	return s
 }
-
-

@@ -11,8 +11,8 @@ import (
 
 // Command provides a fluent API for building and running ffmpeg invocations.
 type Command struct {
-	bin    string
-	args   []string
+	bin     string
+	args    []string
 	filters []string
 }
 
@@ -239,5 +239,3 @@ func (f *FilterChain) Tile(cols, rows int) *FilterChain {
 func (f *FilterChain) String() string {
 	return strings.Join(f.ops, ",")
 }
-
-

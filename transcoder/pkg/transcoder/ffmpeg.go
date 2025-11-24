@@ -52,7 +52,7 @@ func (t *FFmpegTranscoder) TranscodeHLS(ctx context.Context, inputPath, outDir s
 		}
 		cmd.FilterChain(fc)
 		cmd.VideoCodec("libx264").Preset(t.x264Preset).CRF(r.CRF)
-        
+
 		if r.VideoBitrateKbps > 0 {
 			cmd.VideoBitrateKbps(r.VideoBitrateKbps).
 				MaxrateKbps(r.VideoBitrateKbps).

@@ -95,5 +95,3 @@ func (b *SpriteBuilder) Run(ctx context.Context) error {
 
 	return cmd.Run(ctx)
 }
-
-

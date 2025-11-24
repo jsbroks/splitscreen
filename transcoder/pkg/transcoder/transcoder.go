@@ -7,12 +7,12 @@ import (
 
 // Rendition defines a single HLS output variant.
 type Rendition struct {
-	Height            int   // 240, 360, 480, 720, 1080
-	VideoBitrateKbps  int   // optional target; use with CRF if desired
-	AudioBitrateKbps  int   // e.g. 96/128
-	FPS               int   // 24/30; can be 0 to keep source
-	KeyframeInterval  int   // in frames (e.g., 48 for 24fps, ~2s)
-	CRF               int   // e.g., 21–28; lower = higher quality
+	Height           int // 240, 360, 480, 720, 1080
+	VideoBitrateKbps int // optional target; use with CRF if desired
+	AudioBitrateKbps int // e.g. 96/128
+	FPS              int // 24/30; can be 0 to keep source
+	KeyframeInterval int // in frames (e.g., 48 for 24fps, ~2s)
+	CRF              int // e.g., 21–28; lower = higher quality
 }
 
 type Transcoder interface {

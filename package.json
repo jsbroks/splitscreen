@@ -13,6 +13,7 @@
     "db:push": "drizzle-kit push",
     "db:studio": "drizzle-kit studio",
     "dev": "next dev --turbo",
+    "dev:transcoder": "bash -lc 'set -a; [ -f .env ] && . .env; set +a; cd transcoder && go run main.go'",
     "preview": "next build && next start",
     "start": "next start",
     "typecheck": "tsc --noEmit"

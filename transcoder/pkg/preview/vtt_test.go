@@ -28,5 +28,3 @@ func TestVTTBuilder_GridTimeline_FPSBased(t *testing.T) {
 		t.Fatalf("missing expected last tile coords in:\n%s", out)
 	}
 }
-
-

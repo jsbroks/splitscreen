@@ -6,6 +6,7 @@ import {
   pgTable,
   text,
   timestamp,
+  uniqueIndex,
 } from "drizzle-orm/pg-core";
 import { user } from "./auth";
 
@@ -45,5 +46,81 @@ export const video = pgTable(
   (t) => [
     index("videos_user_idx").on(t.userId),
     index("videos_status_idx").on(t.status),
+  ],
+);
+
+// Categories a video can belong to (many-to-many).
+export const category = pgTable(
+  "category",
+  {
+    id: text("id").primaryKey(),
+    name: text("name").notNull(),
+    slug: text("slug").notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at")
+      .defaultNow()
+      .$onUpdate(() => /* @__PURE__ */ new Date())
+      .notNull(),
+  },
+  (t) => [
+    uniqueIndex("category_slug_unique").on(t.slug),
+    index("category_name_idx").on(t.name),
+  ],
+);
+
+// Tags for flexible labeling (many-to-many).
+export const tag = pgTable(
+  "tag",
+  {
+    id: text("id").primaryKey(),
+    name: text("name").notNull(),
+    slug: text("slug").notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at")
+      .defaultNow()
+      .$onUpdate(() => /* @__PURE__ */ new Date())
+      .notNull(),
+  },
+  (t) => [
+    uniqueIndex("tag_slug_unique").on(t.slug),
+    index("tag_name_idx").on(t.name),
+  ],
+);
+
+// Join table: videos ↔ categories
+export const videoCategory = pgTable(
+  "video_category",
+  {
+    videoId: text("video_id")
+      .notNull()
+      .references(() => video.id, { onDelete: "cascade" }),
+    categoryId: text("category_id")
+      .notNull()
+      .references(() => category.id, { onDelete: "cascade" }),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (t) => [
+    uniqueIndex("video_category_unique").on(t.videoId, t.categoryId),
+    index("video_category_video_idx").on(t.videoId),
+    index("video_category_category_idx").on(t.categoryId),
+  ],
+);
+
+// Join table: videos ↔ tags
+export const videoTag = pgTable(
+  "video_tag",
+  {
+    videoId: text("video_id")
+      .notNull()
+      .references(() => video.id, { onDelete: "cascade" }),
+    tagId: text("tag_id")
+      .notNull()
+      .references(() => tag.id, { onDelete: "cascade" }),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (t) => [
+    uniqueIndex("video_tag_unique").on(t.videoId, t.tagId),
+    index("video_tag_video_idx").on(t.videoId),
+    index("video_tag_tag_idx").on(t.tagId),
   ],
 );

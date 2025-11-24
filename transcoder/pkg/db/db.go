@@ -2,9 +2,11 @@ package db
 
 import (
 	"context"
-	"fmt"
 	"database/sql"
+	"fmt"
 	"time"
+
+	_ "github.com/lib/pq"
 )
 
 // Open creates a database/sql client (lib/pq) from a DATABASE_URL and verifies connectivity.
@@ -28,5 +30,3 @@ func Open(ctx context.Context, databaseURL string) (*sql.DB, error) {
 	}
 	return db, nil
 }
-
-

@@ -11,6 +11,7 @@ import (
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/credentials"
 	"github.com/aws/aws-sdk-go-v2/feature/s3/manager"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/aws/aws-sdk-go-v2/service/s3/types"
@@ -18,11 +19,15 @@ import (
 
 // S3Options configures the S3Syncer.
 type S3Options struct {
-	Region        string
-	Endpoint      string
-	UsePathStyle  bool
-	ACL           string // e.g., "public-read"
-	CacheControl  string // e.g., "max-age=60"
+	Region       string
+	Endpoint     string
+	UsePathStyle bool
+	ACL          string // e.g., "public-read"
+	CacheControl string // e.g., "max-age=60"
+	// Optional static credentials. If empty, default provider chain is used.
+	AccessKeyID     string
+	SecretAccessKey string
+	SessionToken    string
 }
 
 type S3Syncer struct {
@@ -36,6 +41,11 @@ func NewS3Syncer(ctx context.Context, opts S3Options) (*S3Syncer, error) {
 	lo := []func(*config.LoadOptions) error{}
 	if opts.Region != "" {
 		lo = append(lo, config.WithRegion(opts.Region))
+	}
+	if opts.AccessKeyID != "" && opts.SecretAccessKey != "" {
+		lo = append(lo, config.WithCredentialsProvider(
+			credentials.NewStaticCredentialsProvider(opts.AccessKeyID, opts.SecretAccessKey, opts.SessionToken),
+		))
 	}
 	awsCfg, err := config.LoadDefaultConfig(ctx, lo...)
 	if err != nil {
@@ -137,5 +147,3 @@ func detectContentType(path string) string {
 	}
 	return "application/octet-stream"
 }
-
-
