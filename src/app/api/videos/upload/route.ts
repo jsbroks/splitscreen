@@ -1,14 +1,14 @@
-import crypto from "node:crypto";
 import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
+import { nanoid } from "nanoid";
 import { type NextRequest, NextResponse } from "next/server";
 import { env } from "~/env";
 import { auth } from "~/server/better-auth";
 import { db } from "~/server/db";
 import { transcodeQueue } from "~/server/db/schema/queue";
-import { video } from "~/server/db/schema/videos";
+import { createVideoId, video } from "~/server/db/schema/videos";
 
 const UPLOAD_ROOT = "/tmp/splitscreen/uploads";
 
@@ -33,7 +33,9 @@ export async function POST(req: NextRequest) {
       }
       const filename = path.basename(body.filename ?? "upload.mp4");
       const contentType = body.contentType ?? "application/octet-stream";
-      const videoId = crypto.randomUUID();
+
+      const videoId = createVideoId();
+
       const originalsPrefix = "originals";
       const key = `${originalsPrefix}/${videoId}/${filename}`;
       const client = new S3Client({
@@ -84,8 +86,8 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Missing title" }, { status: 400 });
     }
 
-    const videoId = crypto.randomUUID();
-    const queueId = crypto.randomUUID();
+    const videoId = createVideoId();
+    const queueId = nanoid();
 
     const originalName = file.name ?? "upload";
     const ext = path.extname(originalName) ?? ".mp4";

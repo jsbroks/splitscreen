@@ -8,7 +8,10 @@ import {
   timestamp,
   uniqueIndex,
 } from "drizzle-orm/pg-core";
+import { nanoid } from "nanoid";
 import { user } from "./auth";
+
+export const createVideoId = () => nanoid(8);
 
 export const videoStatusEnum = pgEnum("video_status", [
   "uploaded",

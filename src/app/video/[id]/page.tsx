@@ -1,9 +1,56 @@
+import { formatDistanceToNow } from "date-fns";
 import { ThumbsDown, ThumbsUp, UserPlus } from "lucide-react";
+import { notFound } from "next/navigation";
 import { VideoCard } from "~/app/_components/VideoCard";
 import { AspectRatio } from "~/components/ui/aspect-ratio";
 import { Avatar, AvatarFallback } from "~/components/ui/avatar";
 import { Button } from "~/components/ui/button";
+import { count, db, eq, takeFirstOrNull } from "~/server/db";
+import * as schema from "~/server/db/schema";
 import { VimoExample } from "./_components/video";
+import type { Metadata } from "next";
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}): Promise<Metadata> {
+  const { id } = await params;
+
+  const result = await db
+    .select()
+    .from(schema.video)
+    .where(eq(schema.video.id, id))
+    .innerJoin(schema.user, eq(schema.video.userId, schema.user.id))
+    .then(takeFirstOrNull);
+
+  if (!result) {
+    return {
+      title: "Video not found | Splitscreen",
+      robots: { index: false, follow: false },
+    };
+  }
+
+  const { video, user } = result;
+  const author = user.displayUsername ?? user.username;
+  const title = `${video.title} by ${author} | Splitscreen`;
+  const description = `Watch ${video.title} uploaded ${formatDistanceToNow(video.createdAt)} ago by ${author}.`;
+
+  return {
+    title,
+    description,
+    openGraph: {
+      title,
+      description,
+      type: "video.other",
+    },
+    twitter: {
+      card: "summary_large_image",
+      title,
+      description,
+    },
+  };
+}
 
 export default async function VideoPage({
   params,
@@ -11,6 +58,25 @@ export default async function VideoPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
+
+  const result = await db
+    .select()
+    .from(schema.video)
+    .where(eq(schema.video.id, id))
+    .innerJoin(schema.user, eq(schema.video.userId, schema.user.id))
+    .then(takeFirstOrNull);
+
+  if (!result) notFound();
+
+  const { video, user } = result;
+
+  const { count: totalVideos } = (await db
+    .select({ count: count() })
+    .from(schema.video)
+    .where(eq(schema.video.userId, user.id))
+    .then(takeFirstOrNull)) ?? { count: 0 };
+
+  const createdTimeAgo = formatDistanceToNow(video.createdAt);
 
   return (
     <main>
@@ -22,10 +88,10 @@ export default async function VideoPage({
             </AspectRatio>
 
             <div>
-              <h2 className="mb-0 pb-0 font-bold text-xl">Some title</h2>
+              <h2 className="mb-0 pb-0 font-bold text-xl">{video.title}</h2>
               <div className="flex items-center gap-4 text-muted-foreground text-sm">
                 <p className="grow text-muted-foreground">
-                  100k views | 1 year ago
+                  100k views | {createdTimeAgo} ago
                 </p>
 
                 <div className="flex shrink-0 items-center gap-2">
@@ -47,9 +113,14 @@ export default async function VideoPage({
                 <AvatarFallback className="size-9">JL</AvatarFallback>
               </Avatar>
               <div className="grow">
-                <p className="font-bold">John Doe</p>
+                <p className="font-bold">
+                  {user.displayUsername ?? user.username}
+                </p>
                 <p className="text-muted-foreground text-xs">
-                  3,245 Videos | 389K Subscribers
+                  {new Intl.NumberFormat("en", { notation: "compact" }).format(
+                    totalVideos ?? 0,
+                  )}{" "}
+                  video{totalVideos > 1 ? "s" : ""} | 389K Subscribers
                 </p>
               </div>
               <Button className="shrink-0" size="lg" variant="outline">

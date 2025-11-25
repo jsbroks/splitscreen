@@ -1,19 +1,16 @@
 "use client";
-import Plyr, { type APITypes } from "plyr-react";
+
+import dynamic from "next/dynamic";
 
 import "plyr-react/plyr.css";
-import { useEffect, useRef } from "react";
 import "~/styles/plyr.css";
 
-export const VimoExample = () => {
-  const plyr = useRef<APITypes>(null);
-  useEffect(() => {
-    if (plyr.current) {
-    }
-  }, []);
+const Plyr = dynamic(() => import("plyr-react"), { ssr: false });
 
+export const VimoExample = () => {
   return (
     <Plyr
+      className="h-full w-full"
       options={{
         keyboard: { global: true },
         resetOnEnd: true,

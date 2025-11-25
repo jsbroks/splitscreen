@@ -16,3 +16,18 @@ const conn = globalForDb.conn ?? postgres(env.DATABASE_URL);
 if (env.NODE_ENV !== "production") globalForDb.conn = conn;
 
 export const db = drizzle(conn, { schema });
+export * from "drizzle-orm";
+
+export const takeFirst = <T>(result: T[]): T => {
+  if (result.length === 0) {
+    throw new Error("No result found");
+  }
+  return result[0] as T;
+};
+
+export const takeFirstOrNull = <T>(result: T[]): T | null => {
+  if (result.length === 0) {
+    return null;
+  }
+  return result[0] as T;
+};
