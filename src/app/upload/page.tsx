@@ -97,84 +97,86 @@ export default function UploadPage() {
   };
 
   return (
-    <div className="mx-auto max-w-2xl p-6">
-      <h1 className="mb-6 font-semibold text-2xl">Upload a video</h1>
-      <form className="space-y-4" onSubmit={handleSubmit(onSubmit)}>
-        <div className="space-y-2">
-          <Label>Title</Label>
-          <Input
-            placeholder="My awesome video"
-            type="text"
-            {...register("title", { required: true })}
-          />
-        </div>
-        <div className="space-y-2">
-          <Label>Description</Label>
-          <Textarea
-            placeholder="Optional description"
-            {...register("description")}
-          />
-        </div>
-        <div className="space-y-2">
-          <Label>Video file</Label>
-          <div
-            {...getVideoRootProps()}
-            className="flex cursor-pointer items-center justify-center rounded-md border border-input border-dashed p-6 text-center hover:bg-accent/50"
-          >
-            <input {...getVideoInputProps()} />
-            <div className="space-y-1">
-              <p className="text-sm">
-                {isVideoDragActive
-                  ? "Drop the video here..."
-                  : "Drag and drop a video here, or click to select"}
-              </p>
-              {videoFile && (
-                <p className="text-muted-foreground text-xs">
-                  Selected: {videoFile.name} (
-                  {Math.round(videoFile.size / 1024)} KB)
+    <div className="mx-auto max-w-7xl p-10">
+      <div className="max-w-xl">
+        <h1 className="mb-6 font-semibold text-2xl">Upload a video</h1>
+        <form className="space-y-4" onSubmit={handleSubmit(onSubmit)}>
+          <div className="space-y-2">
+            <Label>Title</Label>
+            <Input
+              placeholder="My awesome video"
+              type="text"
+              {...register("title", { required: true })}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label>Description</Label>
+            <Textarea
+              placeholder="Optional description"
+              {...register("description")}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label>Video file</Label>
+            <div
+              {...getVideoRootProps()}
+              className="flex cursor-pointer items-center justify-center rounded-md border border-input border-dashed p-6 text-center hover:bg-accent/50"
+            >
+              <input {...getVideoInputProps()} />
+              <div className="space-y-1">
+                <p className="text-sm">
+                  {isVideoDragActive
+                    ? "Drop the video here..."
+                    : "Drag and drop a video here, or click to select"}
                 </p>
-              )}
-              {videoRejections?.length > 0 && (
-                <p className="text-destructive text-xs">
-                  Invalid file. Please select a video.
-                </p>
-              )}
+                {videoFile && (
+                  <p className="text-muted-foreground text-xs">
+                    Selected: {videoFile.name} (
+                    {Math.round(videoFile.size / 1024)} KB)
+                  </p>
+                )}
+                {videoRejections?.length > 0 && (
+                  <p className="text-destructive text-xs">
+                    Invalid file. Please select a video.
+                  </p>
+                )}
+              </div>
             </div>
           </div>
-        </div>
-        <div className="space-y-2">
-          <Label>Thumbnail (optional)</Label>
-          <div
-            {...getThumbRootProps()}
-            className="flex cursor-pointer items-center justify-center rounded-md border border-input border-dashed p-6 text-center hover:bg-accent/50"
-          >
-            <input {...getThumbInputProps()} />
-            <div className="space-y-1">
-              <p className="text-sm">
-                {isThumbDragActive
-                  ? "Drop the image here..."
-                  : "Drag and drop an image here, or click to select"}
-              </p>
-              {thumbFile && (
-                <p className="text-muted-foreground text-xs">
-                  Selected: {thumbFile.name} (
-                  {Math.round(thumbFile.size / 1024)} KB)
+          <div className="space-y-2">
+            <Label>Thumbnail (optional)</Label>
+            <div
+              {...getThumbRootProps()}
+              className="flex cursor-pointer items-center justify-center rounded-md border border-input border-dashed p-6 text-center hover:bg-accent/50"
+            >
+              <input {...getThumbInputProps()} />
+              <div className="space-y-1">
+                <p className="text-sm">
+                  {isThumbDragActive
+                    ? "Drop the image here..."
+                    : "Drag and drop an image here, or click to select"}
                 </p>
-              )}
-              {thumbRejections?.length > 0 && (
-                <p className="text-destructive text-xs">
-                  Invalid file. Please select an image.
-                </p>
-              )}
+                {thumbFile && (
+                  <p className="text-muted-foreground text-xs">
+                    Selected: {thumbFile.name} (
+                    {Math.round(thumbFile.size / 1024)} KB)
+                  </p>
+                )}
+                {thumbRejections?.length > 0 && (
+                  <p className="text-destructive text-xs">
+                    Invalid file. Please select an image.
+                  </p>
+                )}
+              </div>
             </div>
           </div>
-        </div>
-        <div className="pt-2">
-          <Button disabled={isSubmitting} type="submit">
-            {isSubmitting ? "Uploading..." : "Upload"}
-          </Button>
-        </div>
-      </form>
+          <div className="pt-2">
+            <Button disabled={isSubmitting} type="submit">
+              {isSubmitting ? "Uploading..." : "Upload"}
+            </Button>
+          </div>
+        </form>
+      </div>
     </div>
   );
 }

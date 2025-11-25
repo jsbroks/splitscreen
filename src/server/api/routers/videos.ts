@@ -2,12 +2,12 @@ import crypto from "node:crypto";
 import path from "node:path";
 import { PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
+import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { env } from "~/env";
 import { db } from "~/server/db";
 import { video as videoTable } from "~/server/db/schema/videos";
 import { createTRPCRouter, protectedProcedure, publicProcedure } from "../trpc";
-import { TRPCError } from "@trpc/server";
 
 export const videosRouter = createTRPCRouter({
   getLatest: publicProcedure.query(async () => {

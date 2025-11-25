@@ -2,7 +2,8 @@ import "~/styles/globals.css";
 
 import type { Metadata } from "next";
 import { Geist } from "next/font/google";
-
+import { Toaster } from "~/components/ui/sonner";
+import { getSession } from "~/server/better-auth/server";
 import { TRPCReactProvider } from "~/trpc/react";
 import { Navbar } from "./_components/Navbar";
 
@@ -17,15 +18,18 @@ const geist = Geist({
   variable: "--font-geist-sans",
 });
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
+  const session = await getSession();
+
   return (
     <html className={`${geist.variable} dark dark:bg-black`} lang="en">
       <body>
         <TRPCReactProvider>
-          <Navbar />
+          <Navbar user={session?.user} />
           {children}
+          <Toaster />
         </TRPCReactProvider>
       </body>
     </html>

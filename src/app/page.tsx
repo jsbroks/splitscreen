@@ -1,7 +1,6 @@
 import { Calendar, Filter, SortAsc } from "lucide-react";
 
 import { Button } from "~/components/ui/button";
-
 import {
   Select,
   SelectContent,
@@ -11,6 +10,7 @@ import {
 } from "~/components/ui/select";
 import { getSession } from "~/server/better-auth/server";
 import { api, HydrateClient } from "~/trpc/server";
+import { CategoriesCarousel } from "./_components/CategoriesCarousel";
 import { VideoCard } from "./_components/VideoCard";
 
 export default async function Home() {
@@ -55,6 +55,7 @@ export default async function Home() {
               </SelectContent>
             </Select>
           </div>
+          <CategoriesCarousel />
           <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
             <VideoCard />
             <VideoCard />
