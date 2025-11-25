@@ -138,7 +138,8 @@ func processJob(
 	err = t.GenerateHoverPreview(
 		ctx, inputPath, 
 		filepath.Join(outputPath, "hover.webm"), filepath.Join(outputPath, "hover.mp4"), 
-		5*time.Second, 720, 24,
+		5*time.Second, 
+		720, 24,
 	)
 	if err != nil {
 		log.Error("generate hover preview error", "id", j.ID, "error", err)
@@ -155,6 +156,7 @@ func processJob(
 		log.Error("complete error for job", "id", j.ID, "error", err)
 		return
 	}
+
 	log.Info("job done", "id", j.ID, "duration", time.Since(start).Truncate(time.Millisecond))
 }
 

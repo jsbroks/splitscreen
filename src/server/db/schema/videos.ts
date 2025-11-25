@@ -37,6 +37,8 @@ export const video = pgTable(
     // Optional metadata
     durationSeconds: integer("duration_seconds"), // set after probe/transcode
     sizeBytes: bigint("size_bytes", { mode: "number" }),
+    // Aggregate counters
+    viewsCount: integer("views_count").notNull().default(0),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at")
       .defaultNow()
@@ -46,6 +48,33 @@ export const video = pgTable(
   (t) => [
     index("videos_user_idx").on(t.userId),
     index("videos_status_idx").on(t.status),
+  ],
+);
+
+// Per-user view history for videos.
+export const videoViewHistory = pgTable(
+  "video_view_history",
+  {
+    id: text("id").primaryKey(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    videoId: text("video_id")
+      .notNull()
+      .references(() => video.id, { onDelete: "cascade" }),
+    viewCount: integer("view_count").notNull().default(0),
+    lastViewedAt: timestamp("last_viewed_at"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at")
+      .defaultNow()
+      .$onUpdate(() => /* @__PURE__ */ new Date())
+      .notNull(),
+  },
+  (t) => [
+    uniqueIndex("video_view_history_user_video_unique").on(t.userId, t.videoId),
+    index("video_view_history_user_idx").on(t.userId),
+    index("video_view_history_video_idx").on(t.videoId),
+    index("video_view_history_last_viewed_idx").on(t.lastViewedAt),
   ],
 );
 
