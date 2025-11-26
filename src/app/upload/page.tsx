@@ -91,6 +91,7 @@ export default function UploadPage() {
       // Navigate to the video page if it exists, else back to home
       router.push(`/video/${sign.videoId}`);
     } catch (e) {
+      console.error(e);
       const message = e instanceof Error ? e.message : "Upload failed";
       toast.error(message);
     }

@@ -1,14 +1,18 @@
 import { formatDistanceToNow } from "date-fns";
-import { ThumbsDown, ThumbsUp, UserPlus } from "lucide-react";
+import { UserPlus } from "lucide-react";
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { VideoCard } from "~/app/_components/VideoCard";
 import { AspectRatio } from "~/components/ui/aspect-ratio";
-import { Avatar, AvatarFallback } from "~/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "~/components/ui/avatar";
 import { Button } from "~/components/ui/button";
+import { getSession } from "~/server/better-auth/server";
 import { count, db, eq, takeFirstOrNull } from "~/server/db";
 import * as schema from "~/server/db/schema";
+import { api } from "~/trpc/server";
+import { Reactions } from "./_components/Reactions";
+import { FingerPrintViewCounter } from "./_components/ViewCounter";
 import { VimoExample } from "./_components/video";
-import type { Metadata } from "next";
 
 export async function generateMetadata({
   params,
@@ -21,7 +25,7 @@ export async function generateMetadata({
     .select()
     .from(schema.video)
     .where(eq(schema.video.id, id))
-    .innerJoin(schema.user, eq(schema.video.userId, schema.user.id))
+    .innerJoin(schema.user, eq(schema.video.uploadedById, schema.user.id))
     .then(takeFirstOrNull);
 
   if (!result) {
@@ -32,9 +36,9 @@ export async function generateMetadata({
   }
 
   const { video, user } = result;
-  const author = user.displayUsername ?? user.username;
+  const author = video.creatorUsername ?? user.displayUsername ?? user.username;
   const title = `${video.title} by ${author} | Splitscreen`;
-  const description = `Watch ${video.title} uploaded ${formatDistanceToNow(video.createdAt)} ago by ${author}.`;
+  const description = `Watch ${video.title} created ${formatDistanceToNow(video.createdAt)} ago by ${author}.`;
 
   return {
     title,
@@ -59,27 +63,42 @@ export default async function VideoPage({
 }) {
   const { id } = await params;
 
-  const result = await db
-    .select()
-    .from(schema.video)
-    .where(eq(schema.video.id, id))
-    .innerJoin(schema.user, eq(schema.video.userId, schema.user.id))
-    .then(takeFirstOrNull);
+  const video = await db.query.video.findFirst({
+    where: eq(schema.video.id, id),
+    with: {
+      uploadedBy: true,
+      tags: true,
+    },
+  });
 
-  if (!result) notFound();
+  if (!video) notFound();
 
-  const { video, user } = result;
+  const session = await getSession();
+  if (session != null) {
+    await api.videos.view({ videoId: video.id });
+  }
 
   const { count: totalVideos } = (await db
     .select({ count: count() })
     .from(schema.video)
-    .where(eq(schema.video.userId, user.id))
+    .where(eq(schema.video.uploadedById, video.uploadedById))
     .then(takeFirstOrNull)) ?? { count: 0 };
 
   const createdTimeAgo = formatDistanceToNow(video.createdAt);
 
+  const { count: viewsCount } = (await db
+    .select({ count: count() })
+    .from(schema.videoView)
+    .where(eq(schema.videoView.videoId, video.id))
+    .then(takeFirstOrNull)) ?? { count: 0 };
+
+  const formattedViewsCount = new Intl.NumberFormat("en", {
+    notation: "compact",
+  }).format(viewsCount ?? 0);
+
   return (
     <main>
+      {session == null && <FingerPrintViewCounter videoId={video.id} />}
       <div className="container mx-auto max-w-7xl space-y-3 px-6 py-12">
         <div className="flex gap-6">
           <div className="grow space-y-6">
@@ -89,14 +108,14 @@ export default async function VideoPage({
 
             <div>
               <h2 className="mb-0 pb-0 font-bold text-xl">{video.title}</h2>
-              <div className="flex items-center gap-4 text-muted-foreground text-sm">
+              <div className="flex items-center gap-2 text-muted-foreground text-sm">
                 <p className="grow text-muted-foreground">
-                  100k views | {createdTimeAgo} ago
+                  {formattedViewsCount} view{viewsCount === 1 ? "" : "s"} |{" "}
+                  {createdTimeAgo} ago
                 </p>
 
-                <div className="flex shrink-0 items-center gap-2">
-                  <ThumbsUp className="size-4" /> <span>120</span> |{" "}
-                  <ThumbsDown className="size-4" />
+                <div className="mr-4">
+                  <Reactions videoId={video.id} />
                 </div>
 
                 <Button size="sm" variant="outline">
@@ -110,11 +129,21 @@ export default async function VideoPage({
 
             <section className="flex items-center gap-2">
               <Avatar className="size-9 shrink-0">
-                <AvatarFallback className="size-9">JL</AvatarFallback>
+                <AvatarImage src={video.uploadedBy.image ?? undefined} />
+                <AvatarFallback className="size-9">
+                  {(
+                    video.uploadedBy.displayUsername ??
+                    video.uploadedBy.username
+                  )
+                    ?.slice(0, 2)
+                    .toUpperCase()}
+                </AvatarFallback>
               </Avatar>
               <div className="grow">
                 <p className="font-bold">
-                  {user.displayUsername ?? user.username}
+                  {video.creatorUsername ??
+                    video.uploadedBy.displayUsername ??
+                    video.uploadedBy.username}
                 </p>
                 <p className="text-muted-foreground text-xs">
                   {new Intl.NumberFormat("en", { notation: "compact" }).format(
@@ -163,18 +192,31 @@ export default async function VideoPage({
             <section className="space-y-2">
               <p className="text-muted-foreground">Related videos</p>
               <div className="grid grid-cols-1 gap-3 md:grid-cols-3 lg:grid-cols-3">
-                <VideoCard />
-                <VideoCard />
-                <VideoCard />
-                <VideoCard /> <VideoCard /> <VideoCard /> <VideoCard />
+                <VideoCard id="1" title="Video 1" />
+                <VideoCard id="2" title="Video 2" />
+                <VideoCard id="3" title="Video 3" />
+                <VideoCard id="4" title="Video 4" />
+                <VideoCard id="5" title="Video 5" />
+                <VideoCard id="6" title="Video 6" />
+                <VideoCard id="7" title="Video 7" />
+                <VideoCard id="8" title="Video 8" />
+                <VideoCard id="9" title="Video 9" />
+                <VideoCard id="10" title="Video 10" />
               </div>
             </section>
           </div>
 
           <div className="w-[300px] shrink-0 space-y-3">
-            <VideoCard />
-            <VideoCard />
-            <VideoCard /> <VideoCard /> <VideoCard />
+            <VideoCard id="1" title="Video 1" />
+            <VideoCard id="2" title="Video 2" />
+            <VideoCard id="3" title="Video 3" />
+            <VideoCard id="4" title="Video 4" />
+            <VideoCard id="5" title="Video 5" />
+            <VideoCard id="6" title="Video 6" />
+            <VideoCard id="7" title="Video 7" />
+            <VideoCard id="8" title="Video 8" />
+            <VideoCard id="9" title="Video 9" />
+            <VideoCard id="10" title="Video 10" />
           </div>
         </div>
       </div>

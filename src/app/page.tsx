@@ -8,21 +8,18 @@ import {
   SelectTrigger,
   SelectValue,
 } from "~/components/ui/select";
-import { getSession } from "~/server/better-auth/server";
-import { db } from "~/server/db";
+import { db, desc } from "~/server/db";
 import * as schema from "~/server/db/schema";
-import { api, HydrateClient } from "~/trpc/server";
+import { HydrateClient } from "~/trpc/server";
 import { CategoriesCarousel } from "./_components/CategoriesCarousel";
 import { VideoCard } from "./_components/VideoCard";
 
 export default async function Home() {
-  const session = await getSession();
-
-  if (session) {
-    void api.post.getLatest.prefetch();
-  }
-
-  const videos = await db.select().from(schema.video).limit(10);
+  const videos = await db
+    .select()
+    .from(schema.video)
+    .orderBy(desc(schema.video.createdAt))
+    .limit(24);
 
   return (
     <HydrateClient>
@@ -60,6 +57,7 @@ export default async function Home() {
             </Select>
           </div>
           <CategoriesCarousel />
+
           <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
             {videos.map((video) => (
               <VideoCard key={video.id} {...video} />

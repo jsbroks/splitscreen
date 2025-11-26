@@ -1,6 +1,7 @@
+import { relations, sql } from "drizzle-orm";
 import {
   bigint,
-  index,
+  check,
   integer,
   pgEnum,
   pgTable,
@@ -10,6 +11,7 @@ import {
 } from "drizzle-orm/pg-core";
 import { nanoid } from "nanoid";
 import { user } from "./auth";
+import { star } from "./stars";
 
 export const createVideoId = () => nanoid(8);
 
@@ -26,133 +28,182 @@ export const assetTypeEnum = pgEnum("asset_type", [
   "vtt",
 ]);
 
-export const video = pgTable(
-  "video",
-  {
-    id: text("id").primaryKey(),
-    userId: text("user_id")
-      .notNull()
-      .references(() => user.id, { onDelete: "cascade" }),
-    title: text("title").notNull(),
-    description: text("description"),
-    originalKey: text("original_key").notNull(), // e.g. originals/<videoId>/upload.mp4
-    status: videoStatusEnum("status").notNull().default("uploaded"),
-    // Optional metadata
-    durationSeconds: integer("duration_seconds"), // set after probe/transcode
-    sizeBytes: bigint("size_bytes", { mode: "number" }),
-    // Aggregate counters
-    viewsCount: integer("views_count").notNull().default(0),
-    createdAt: timestamp("created_at").defaultNow().notNull(),
-    updatedAt: timestamp("updated_at")
-      .defaultNow()
-      .$onUpdate(() => /* @__PURE__ */ new Date())
-      .notNull(),
-  },
-  (t) => [
-    index("videos_user_idx").on(t.userId),
-    index("videos_status_idx").on(t.status),
-  ],
-);
+export const reactionTypeEnum = pgEnum("reaction_type", ["like", "dislike"]);
 
-// Per-user view history for videos.
-export const videoViewHistory = pgTable(
-  "video_view_history",
+export const video = pgTable("video", {
+  id: text("id").primaryKey(),
+  uploadedById: text("uploaded_by_id")
+    .notNull()
+    .references(() => user.id, { onDelete: "cascade" }),
+  title: text("title").notNull(),
+  description: text("description"),
+  originalKey: text("original_key").notNull(), // e.g. originals/<videoId>/upload.mp4
+
+  status: videoStatusEnum("status").notNull().default("uploaded"),
+
+  // Optional metadata
+  durationSeconds: integer("duration_seconds"), // set after probe/transcode
+  sizeBytes: bigint("size_bytes", { mode: "number" }),
+
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at")
+    .defaultNow()
+    .$onUpdate(() => /* @__PURE__ */ new Date())
+    .notNull(),
+
+  creatorUsername: text("creator_username"),
+});
+
+export const videoRelations = relations(video, ({ many, one }) => ({
+  uploadedBy: one(user, {
+    fields: [video.uploadedById],
+    references: [user.id],
+  }),
+  stars: many(videoStar),
+  tags: many(videoTag),
+  categories: many(videoCategory),
+  views: many(videoView),
+  // reactions: many(videoReaction),
+}));
+
+export const videoStar = pgTable("video_star", {
+  id: text("id").primaryKey(),
+  videoId: text("video_id")
+    .notNull()
+    .references(() => video.id, { onDelete: "cascade" }),
+  starId: text("star_id")
+    .notNull()
+    .references(() => star.id, { onDelete: "cascade" }),
+});
+
+export const videoStarRelations = relations(videoStar, ({ one }) => ({
+  video: one(video, {
+    fields: [videoStar.videoId],
+    references: [video.id],
+  }),
+  star: one(star, {
+    fields: [videoStar.starId],
+    references: [star.id],
+  }),
+}));
+
+// Per-user/fingerprint view history for videos.
+// Either userId or fingerprintId must be set (or both for authenticated users with fingerprints).
+export const videoView = pgTable(
+  "video_view",
   {
     id: text("id").primaryKey(),
-    userId: text("user_id")
-      .notNull()
-      .references(() => user.id, { onDelete: "cascade" }),
+    userId: text("user_id").references(() => user.id, { onDelete: "cascade" }),
+    fingerprintId: text("fingerprint_id"),
     videoId: text("video_id")
       .notNull()
       .references(() => video.id, { onDelete: "cascade" }),
-    viewCount: integer("view_count").notNull().default(0),
-    lastViewedAt: timestamp("last_viewed_at"),
     createdAt: timestamp("created_at").defaultNow().notNull(),
-    updatedAt: timestamp("updated_at")
-      .defaultNow()
-      .$onUpdate(() => /* @__PURE__ */ new Date())
-      .notNull(),
   },
   (t) => [
-    uniqueIndex("video_view_history_user_video_unique").on(t.userId, t.videoId),
-    index("video_view_history_user_idx").on(t.userId),
-    index("video_view_history_video_idx").on(t.videoId),
-    index("video_view_history_last_viewed_idx").on(t.lastViewedAt),
+    // Ensure at least userId or fingerprintId is set
+    check(
+      "video_view_identity_check",
+      sql`${t.userId} IS NOT NULL OR ${t.fingerprintId} IS NOT NULL`,
+    ),
   ],
 );
 
-// Categories a video can belong to (many-to-many).
-export const category = pgTable(
-  "category",
+export const videoViewRelations = relations(videoView, ({ one }) => ({
+  video: one(video, {
+    fields: [videoView.videoId],
+    references: [video.id],
+  }),
+  user: one(user, {
+    fields: [videoView.userId],
+    references: [user.id],
+  }),
+}));
+
+// Per-user/fingerprint reactions (likes/dislikes) for videos.
+// Either userId or fingerprintId must be set (or both for authenticated users with fingerprints).
+export const videoReaction = pgTable(
+  "video_reaction",
   {
     id: text("id").primaryKey(),
-    name: text("name").notNull(),
-    slug: text("slug").notNull(),
-    createdAt: timestamp("created_at").defaultNow().notNull(),
-    updatedAt: timestamp("updated_at")
-      .defaultNow()
-      .$onUpdate(() => /* @__PURE__ */ new Date())
-      .notNull(),
-  },
-  (t) => [
-    uniqueIndex("category_slug_unique").on(t.slug),
-    index("category_name_idx").on(t.name),
-  ],
-);
-
-// Tags for flexible labeling (many-to-many).
-export const tag = pgTable(
-  "tag",
-  {
-    id: text("id").primaryKey(),
-    name: text("name").notNull(),
-    slug: text("slug").notNull(),
-    createdAt: timestamp("created_at").defaultNow().notNull(),
-    updatedAt: timestamp("updated_at")
-      .defaultNow()
-      .$onUpdate(() => /* @__PURE__ */ new Date())
-      .notNull(),
-  },
-  (t) => [
-    uniqueIndex("tag_slug_unique").on(t.slug),
-    index("tag_name_idx").on(t.name),
-  ],
-);
-
-// Join table: videos ↔ categories
-export const videoCategory = pgTable(
-  "video_category",
-  {
+    userId: text("user_id").references(() => user.id, { onDelete: "cascade" }),
+    fingerprintId: text("fingerprint_id"),
     videoId: text("video_id")
       .notNull()
       .references(() => video.id, { onDelete: "cascade" }),
-    categoryId: text("category_id")
-      .notNull()
-      .references(() => category.id, { onDelete: "cascade" }),
+    reactionType: reactionTypeEnum("reaction_type").notNull(),
     createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at")
+      .defaultNow()
+      .$onUpdate(() => /* @__PURE__ */ new Date())
+      .notNull(),
   },
   (t) => [
-    uniqueIndex("video_category_unique").on(t.videoId, t.categoryId),
-    index("video_category_video_idx").on(t.videoId),
-    index("video_category_category_idx").on(t.categoryId),
+    // Ensure at least userId or fingerprintId is set
+    check(
+      "video_reaction_identity_check",
+      sql`${t.userId} IS NOT NULL OR ${t.fingerprintId} IS NOT NULL`,
+    ),
+
+    // Unique per user OR fingerprint per video
+    uniqueIndex("video_reaction_user_video_unique").on(t.userId, t.videoId),
+    uniqueIndex("video_reaction_fingerprint_video_unique").on(
+      t.fingerprintId,
+      t.videoId,
+    ),
   ],
 );
 
-// Join table: videos ↔ tags
-export const videoTag = pgTable(
-  "video_tag",
-  {
-    videoId: text("video_id")
-      .notNull()
-      .references(() => video.id, { onDelete: "cascade" }),
-    tagId: text("tag_id")
-      .notNull()
-      .references(() => tag.id, { onDelete: "cascade" }),
-    createdAt: timestamp("created_at").defaultNow().notNull(),
-  },
-  (t) => [
-    uniqueIndex("video_tag_unique").on(t.videoId, t.tagId),
-    index("video_tag_video_idx").on(t.videoId),
-    index("video_tag_tag_idx").on(t.tagId),
-  ],
-);
+export const tag = pgTable("tag", {
+  id: text("id").primaryKey(),
+  name: text("name").notNull(),
+  slug: text("slug").notNull(),
+});
+
+export const videoTag = pgTable("video_tag", {
+  id: text("id").primaryKey(),
+  videoId: text("video_id")
+    .notNull()
+    .references(() => video.id, { onDelete: "cascade" }),
+  tagId: text("tag_id")
+    .notNull()
+    .references(() => tag.id, { onDelete: "cascade" }),
+});
+
+export const videoTagRelations = relations(videoTag, ({ one }) => ({
+  video: one(video, {
+    fields: [videoTag.videoId],
+    references: [video.id],
+  }),
+  tag: one(tag, {
+    fields: [videoTag.tagId],
+    references: [tag.id],
+  }),
+}));
+
+export const category = pgTable("category", {
+  id: text("id").primaryKey(),
+  name: text("name").notNull(),
+  slug: text("slug").notNull(),
+});
+
+export const videoCategory = pgTable("video_category", {
+  id: text("id").primaryKey(),
+  videoId: text("video_id")
+    .notNull()
+    .references(() => video.id, { onDelete: "cascade" }),
+  categoryId: text("category_id")
+    .notNull()
+    .references(() => category.id, { onDelete: "cascade" }),
+});
+
+export const videoCategoryRelations = relations(videoCategory, ({ one }) => ({
+  video: one(video, {
+    fields: [videoCategory.videoId],
+    references: [video.id],
+  }),
+  category: one(category, {
+    fields: [videoCategory.categoryId],
+    references: [category.id],
+  }),
+}));
