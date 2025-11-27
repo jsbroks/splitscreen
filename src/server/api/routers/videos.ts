@@ -179,6 +179,7 @@ export const videosRouter = createTRPCRouter({
         contentType: z.string().optional(),
         creatorId: z.string().optional(),
         featuredCreatorIds: z.array(z.string()).optional(),
+        tags: z.array(z.string()).optional(),
       }),
     )
     .mutation(async ({ ctx, input }) => {
@@ -230,6 +231,48 @@ export const videosRouter = createTRPCRouter({
             creatorId: creatorId,
           })),
         );
+      }
+
+      // Add tags if provided
+      if (input.tags && input.tags.length > 0) {
+        const existingTags = await db.query.tag.findMany();
+        const existingTagMap = new Map(
+          existingTags.map((t) => [t.name.toLowerCase(), t.id]),
+        );
+        const tagIds: string[] = [];
+
+        for (const tagName of input.tags) {
+          const normalizedName = tagName.trim();
+          const lowerName = normalizedName.toLowerCase();
+
+          // Check if tag exists
+          if (existingTagMap.has(lowerName)) {
+            tagIds.push(existingTagMap.get(lowerName) ?? "");
+          } else {
+            // Create new tag
+            const newTagId = nanoid();
+
+            await db.insert(schema.tag).values({
+              id: newTagId,
+              name: normalizedName,
+              slug: normalizedName,
+            });
+
+            tagIds.push(newTagId);
+            existingTagMap.set(lowerName, newTagId);
+          }
+        }
+
+        // Link tags to video
+        if (tagIds.length > 0) {
+          await db.insert(schema.videoTag).values(
+            tagIds.map((tagId) => ({
+              id: nanoid(),
+              videoId: videoId,
+              tagId: tagId,
+            })),
+          );
+        }
       }
 
       return { videoId, key, uploadUrl, bucket: env.S3_BUCKET };

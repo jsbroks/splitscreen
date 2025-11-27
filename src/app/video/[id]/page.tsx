@@ -3,6 +3,7 @@ import { UserPlus } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { CreatorLink } from "~/app/_components/CreatorBadge";
 import { VideoCard } from "~/app/_components/VideoCard";
 import { AspectRatio } from "~/components/ui/aspect-ratio";
 import { Avatar, AvatarFallback, AvatarImage } from "~/components/ui/avatar";
@@ -182,20 +183,7 @@ export default async function VideoPage({
             {mainCreator && (
               <section className="space-y-2">
                 <p className="text-muted-foreground text-sm">Video Creator</p>
-                <Link
-                  className="inline-flex items-center gap-2 rounded-md bg-secondary px-3 py-2 hover:bg-secondary/80"
-                  href={`/creator/${mainCreator.username}`}
-                >
-                  {mainCreator.image && (
-                    <Avatar className="size-6">
-                      <AvatarImage src={mainCreator.image} />
-                      <AvatarFallback>
-                        {mainCreator.displayName.slice(0, 2)}
-                      </AvatarFallback>
-                    </Avatar>
-                  )}
-                  <span className="font-medium">{mainCreator.displayName}</span>
-                </Link>
+                <CreatorLink creator={mainCreator} />
               </section>
             )}
 
@@ -206,21 +194,7 @@ export default async function VideoPage({
                 </p>
                 <div className="flex flex-wrap gap-2">
                   {video.featuredCreators.map(({ creator }) => (
-                    <Link
-                      className="inline-flex items-center gap-2 rounded-md bg-secondary px-3 py-2 hover:bg-secondary/80"
-                      href={`/creator/${creator.username}`}
-                      key={creator.id}
-                    >
-                      {creator.image && (
-                        <Avatar className="size-6">
-                          <AvatarImage src={creator.image} />
-                          <AvatarFallback>
-                            {creator.displayName.slice(0, 2)}
-                          </AvatarFallback>
-                        </Avatar>
-                      )}
-                      <span className="font-medium">{creator.displayName}</span>
-                    </Link>
+                    <CreatorLink creator={creator} key={creator.id} />
                   ))}
                 </div>
               </section>
