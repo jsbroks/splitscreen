@@ -10,11 +10,13 @@ import { CreatorLink } from "~/app/_components/CreatorBadge";
 import { MultiSelectCreator } from "~/components/MultiSelectCreator";
 import { MultiSelectTag } from "~/components/MultiSelectTag";
 import { SingleSelectCreator } from "~/components/SingleSelectCreator";
+import { AspectRatio } from "~/components/ui/aspect-ratio";
 import { Button } from "~/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
 import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
 import { Textarea } from "~/components/ui/textarea";
+import { VideoPreview } from "~/components/VideoPreview";
 import { api } from "~/trpc/react";
 
 type FormValues = {
@@ -46,6 +48,7 @@ export default function UploadPage() {
   const [videoFile, setVideoFile] = useState<File | null>(null);
   const [thumbFile, setThumbFile] = useState<File | null>(null);
   const [thumbPreviewUrl, setThumbPreviewUrl] = useState<string>("");
+  const [videoPreviewUrl, setVideoPreviewUrl] = useState<string>("");
   const [selectedCreator, setSelectedCreator] = useState<string>("");
   const [selectedFeaturedCreators, setSelectedFeaturedCreators] = useState<
     string[]
@@ -61,6 +64,16 @@ export default function UploadPage() {
     }
     setThumbPreviewUrl("");
   }, [thumbFile]);
+
+  // Create and cleanup video preview URL
+  useEffect(() => {
+    if (videoFile) {
+      const url = URL.createObjectURL(videoFile);
+      setVideoPreviewUrl(url);
+      return () => URL.revokeObjectURL(url);
+    }
+    setVideoPreviewUrl("");
+  }, [videoFile]);
 
   const onDropVideo = useCallback((accepted: File[]) => {
     setVideoFile(accepted?.[0] ?? null);
@@ -200,13 +213,13 @@ export default function UploadPage() {
       selectedFeaturedCreators.map((value) => {
         const creator = creators?.find((c) => c.id === value);
         return creator
-          ? { ...creator, isNew: false }
+          ? { ...creator, isNew: false, key: creator.id }
           : {
-              id: value,
               username: value,
               displayName: value,
               image: null,
               isNew: true,
+              key: value,
             };
       }),
     [creators, selectedFeaturedCreators],
@@ -351,11 +364,20 @@ export default function UploadPage() {
         {/* Preview Section */}
         <div className="w-96 shrink-0">
           <div className="sticky top-6">
-            <Card>
+            <Card className="bg-background">
               <CardHeader>
                 <CardTitle>Preview</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
+                {/* Video Preview */}
+                {videoFile && videoPreviewUrl && (
+                  <div>
+                    <AspectRatio ratio={16 / 9}>
+                      <VideoPreview videoUrl={videoPreviewUrl} />
+                    </AspectRatio>
+                  </div>
+                )}
+
                 {/* Title */}
                 <div>
                   <p className="font-medium text-sm">Title</p>
@@ -397,7 +419,7 @@ export default function UploadPage() {
                     <p className="font-medium text-sm">Featured Creators</p>
                     <div className="mt-1 flex flex-wrap gap-2">
                       {selectedFeaturedData.map((creator) => (
-                        <div key={creator.id}>
+                        <div key={creator.key}>
                           {creator.isNew ? (
                             <span className="rounded-md bg-secondary px-2 py-1 text-sm">
                               {creator.displayName}{" "}

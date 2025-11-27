@@ -45,12 +45,12 @@ export function SingleSelectCreator({
 
   const {
     isOpen,
-    getToggleButtonProps,
     getMenuProps,
     getInputProps,
     highlightedIndex,
     getItemProps,
     selectedItem,
+    openMenu,
   } = useCombobox({
     items: filteredCreators,
     itemToString: (item) => item?.displayName ?? "",
@@ -81,6 +81,18 @@ export function SingleSelectCreator({
         setInputValue("");
       }
     },
+    stateReducer: (_state, actionAndChanges) => {
+      const { changes, type } = actionAndChanges;
+      switch (type) {
+        case useCombobox.stateChangeTypes.InputBlur:
+          return {
+            ...changes,
+            inputValue: "",
+          };
+        default:
+          return changes;
+      }
+    },
   });
 
   const handleClear = () => {
@@ -98,18 +110,26 @@ export function SingleSelectCreator({
     <div className="relative">
       <div className="flex gap-2">
         <div className="relative flex-1">
-          <Button
-            role="combobox"
-            type="button"
-            variant="outline"
-            {...getToggleButtonProps()}
-            className="w-full justify-between"
-          >
-            <span className={cn(!displayValue && "text-muted-foreground")}>
-              {displayValue || placeholder}
-            </span>
-            <ChevronsUpDown className="ml-2 size-4 shrink-0 opacity-50" />
-          </Button>
+          <div className="relative">
+            <Input
+              {...getInputProps({
+                onFocus: () => {
+                  if (!isOpen) {
+                    openMenu();
+                  }
+                },
+              })}
+              className={cn("w-full pr-8", !isOpen && "cursor-pointer")}
+              placeholder={
+                isOpen
+                  ? "Type to search or create..."
+                  : displayValue || placeholder
+              }
+              readOnly={!isOpen}
+              value={isOpen ? inputValue : ""}
+            />
+            <ChevronsUpDown className="-translate-y-1/2 pointer-events-none absolute top-1/2 right-3 size-4 opacity-50" />
+          </div>
         </div>
         {value && (
           <Button
@@ -130,45 +150,35 @@ export function SingleSelectCreator({
           !isOpen && "hidden",
         )}
       >
-        {isOpen && (
-          <>
-            <div className="px-2 py-1.5">
-              <Input
-                {...getInputProps()}
-                className="h-8"
-                placeholder="Type to search or create..."
-              />
-            </div>
-            {filteredCreators.length === 0 && inputValue ? (
-              <li className="px-2 py-6 text-center text-sm">
-                Press Enter to create "{inputValue}"
-              </li>
-            ) : (
-              filteredCreators.map((creator, index) => (
-                <li
-                  key={creator.id}
-                  {...getItemProps({ item: creator, index })}
+        {isOpen &&
+          (filteredCreators.length === 0 && inputValue ? (
+            <li className="px-2 py-6 text-center text-sm">
+              Press Enter to create "{inputValue}"
+            </li>
+          ) : (
+            filteredCreators.map((creator, index) => (
+              <li
+                key={creator.id}
+                {...getItemProps({ item: creator, index })}
+                className={cn(
+                  "relative flex cursor-default select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none",
+                  highlightedIndex === index &&
+                    "bg-accent text-accent-foreground",
+                  selectedItem?.id === creator.id && "bg-accent",
+                )}
+              >
+                <Check
                   className={cn(
-                    "relative flex cursor-default select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none",
-                    highlightedIndex === index &&
-                      "bg-accent text-accent-foreground",
-                    selectedItem?.id === creator.id && "bg-accent",
+                    "mr-2 size-4",
+                    selectedItem?.id === creator.id
+                      ? "opacity-100"
+                      : "opacity-0",
                   )}
-                >
-                  <Check
-                    className={cn(
-                      "mr-2 size-4",
-                      selectedItem?.id === creator.id
-                        ? "opacity-100"
-                        : "opacity-0",
-                    )}
-                  />
-                  {creator.displayName} (@{creator.username})
-                </li>
-              ))
-            )}
-          </>
-        )}
+                />
+                {creator.displayName} (@{creator.username})
+              </li>
+            ))
+          ))}
       </ul>
     </div>
   );
