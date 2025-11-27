@@ -1,3 +1,4 @@
+import { relations } from "drizzle-orm";
 import {
   index,
   integer,
@@ -43,3 +44,10 @@ export const transcodeQueue = pgTable(
     index("transcode_queue_created_idx").on(t.createdAt),
   ],
 );
+
+export const transcodeQueueRelations = relations(transcodeQueue, ({ one }) => ({
+  video: one(video, {
+    fields: [transcodeQueue.videoId],
+    references: [video.id],
+  }),
+}));

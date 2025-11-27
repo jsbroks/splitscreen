@@ -7,6 +7,7 @@ import { z } from "zod";
 import { env } from "~/env";
 import {
   and,
+  asc,
   count,
   db,
   eq,
@@ -15,7 +16,7 @@ import {
   takeFirstOrNull,
 } from "~/server/db";
 import * as schema from "~/server/db/schema";
-import { createVideoId, video as videoTable } from "~/server/db/schema/videos";
+import { createVideoId } from "~/server/db/schema/videos";
 import { createTRPCRouter, protectedProcedure, publicProcedure } from "../trpc";
 
 export const videosRouter = createTRPCRouter({
@@ -212,14 +213,17 @@ export const videosRouter = createTRPCRouter({
         Key: key,
         ContentType: input.contentType ?? "application/octet-stream",
       });
-      const uploadUrl = await getSignedUrl(client, command, { expiresIn: 900 });
-      await db.insert(videoTable).values({
+      const uploadUrl = await getSignedUrl(client, command, {
+        expiresIn: 60 * 30, // 30 mins
+      });
+      await db.insert(schema.video).values({
         id: videoId,
         uploadedById: ctx.session.user.id,
         title: input.title.trim(),
         description: input.description ?? null,
         originalKey: key,
         creatorId: input.creatorId ?? null,
+        status: "uploaded",
       });
 
       // Add featured creators if provided
@@ -275,6 +279,71 @@ export const videosRouter = createTRPCRouter({
         }
       }
 
+      await db.insert(schema.transcodeQueue).values({
+        id: nanoid(),
+        videoId: videoId,
+        inputKey: key,
+        outputPrefix: `videos/${videoId}`,
+        status: "queued",
+      });
+
       return { videoId, key, uploadUrl, bucket: env.S3_BUCKET };
+    }),
+
+  getVideo: publicProcedure
+    .input(
+      z.object({
+        videoId: z.string().min(1),
+      }),
+    )
+    .query(async ({ ctx, input }) => {
+      const video = await ctx.db.query.video.findFirst({
+        where: eq(schema.video.id, input.videoId),
+        with: {
+          transcodeQueue: {
+            orderBy: [asc(schema.transcodeQueue.createdAt)],
+          },
+          uploadedBy: true,
+          tags: true,
+          featuredCreators: {
+            with: {
+              creator: true,
+            },
+          },
+        },
+      });
+
+      if (!video) {
+        return null;
+      }
+
+      const views = await ctx.db
+        .select({ count: count() })
+        .from(schema.videoView)
+        .where(eq(schema.videoView.videoId, input.videoId))
+        .then(takeFirst);
+
+      const transcode = video?.transcodeQueue[0];
+      const hlsSource = transcode
+        ? `${env.S3_ENDPOINT}/${env.S3_BUCKET}/${transcode.outputPrefix}/master.m3u8`
+        : null;
+
+      const hoverPreviewMp4 = transcode
+        ? `${env.S3_ENDPOINT}/${env.S3_BUCKET}/${transcode.outputPrefix}/hover.mp4`
+        : null;
+      const hoverPreviewWebm = transcode
+        ? `${env.S3_ENDPOINT}/${env.S3_BUCKET}/${transcode.outputPrefix}/hover.webm`
+        : null;
+
+      return {
+        ...video,
+        transcode: {
+          ...(transcode ?? {}),
+          hlsSource: hlsSource,
+          hoverPreviewMp4: hoverPreviewMp4,
+          hoverPreviewWebm: hoverPreviewWebm,
+        },
+        views: views?.count ?? 0,
+      };
     }),
 });

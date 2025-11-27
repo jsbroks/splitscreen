@@ -2,6 +2,7 @@ package storage
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"mime"
@@ -87,6 +88,56 @@ func (s *S3Syncer) SyncDirectory(ctx context.Context, localDir string, bucket st
 
 func (s *S3Syncer) UploadFile(ctx context.Context, localPath string, bucket string, key string) error {
 	return s.uploadOne(ctx, localPath, bucket, key)
+}
+
+// DownloadFile downloads a file from S3 to a local path.
+func (s *S3Syncer) DownloadFile(ctx context.Context, bucket string, key string, localPath string) error {
+	// Create parent directory if it doesn't exist
+	if err := os.MkdirAll(filepath.Dir(localPath), 0755); err != nil {
+		return fmt.Errorf("create parent dir: %w", err)
+	}
+
+	// Create the local file
+	f, err := os.Create(localPath)
+	if err != nil {
+		return fmt.Errorf("create local file %s: %w", localPath, err)
+	}
+	defer f.Close()
+
+	// Download from S3
+	result, err := s.client.GetObject(ctx, &s3.GetObjectInput{
+		Bucket: aws.String(bucket),
+		Key:    aws.String(key),
+	})
+	if err != nil {
+		return fmt.Errorf("get object s3://%s/%s: %w", bucket, key, err)
+	}
+	defer result.Body.Close()
+
+	// Copy to local file
+	if _, err := io.Copy(f, result.Body); err != nil {
+		return fmt.Errorf("write to %s: %w", localPath, err)
+	}
+
+	return nil
+}
+
+// FileExists checks if a file exists in S3 at the given bucket and key.
+func (s *S3Syncer) FileExists(ctx context.Context, bucket string, key string) (bool, error) {
+	_, err := s.client.HeadObject(ctx, &s3.HeadObjectInput{
+		Bucket: aws.String(bucket),
+		Key:    aws.String(key),
+	})
+	if err != nil {
+		// Check if it's a "not found" error
+		var notFound *types.NotFound
+		var noSuchKey *types.NoSuchKey
+		if errors.As(err, &notFound) || errors.As(err, &noSuchKey) {
+			return false, nil
+		}
+		return false, fmt.Errorf("head object s3://%s/%s: %w", bucket, key, err)
+	}
+	return true, nil
 }
 
 func (s *S3Syncer) uploadOne(ctx context.Context, localPath string, bucket string, key string) error {

@@ -12,13 +12,16 @@ import {
 import { nanoid } from "nanoid";
 import { user } from "./auth";
 import { creator } from "./creators";
+import { transcodeQueue } from "./queue";
 
 export const createVideoId = () => nanoid(8);
 
 export const videoStatusEnum = pgEnum("video_status", [
   "uploaded",
   "processing",
-  "ready",
+  "in_review",
+  "approved",
+  "rejected",
   "failed",
 ]);
 
@@ -66,6 +69,7 @@ export const videoRelations = relations(video, ({ many, one }) => ({
   categories: many(videoCategory),
   views: many(videoView),
   reactions: many(videoReaction),
+  transcodeQueue: many(transcodeQueue),
 }));
 
 export const videoFeaturedCreator = pgTable("video_featured_creator", {

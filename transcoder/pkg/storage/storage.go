@@ -12,4 +12,10 @@ type Syncer interface {
 
 	// UploadFile uploads a single file at localPath to s3://bucket/key.
 	UploadFile(ctx context.Context, localPath string, bucket string, key string) error
+
+	// DownloadFile downloads a file from s3://bucket/key to localPath.
+	DownloadFile(ctx context.Context, bucket string, key string, localPath string) error
+
+	// FileExists checks if a file exists in object storage at the given bucket and key.
+	FileExists(ctx context.Context, bucket string, key string) (bool, error)
 }

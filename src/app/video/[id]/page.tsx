@@ -9,12 +9,12 @@ import { AspectRatio } from "~/components/ui/aspect-ratio";
 import { Avatar, AvatarFallback, AvatarImage } from "~/components/ui/avatar";
 import { Button } from "~/components/ui/button";
 import { getSession } from "~/server/better-auth/server";
-import { count, db, eq, takeFirstOrNull } from "~/server/db";
+import { count, db, eq, takeFirst, takeFirstOrNull } from "~/server/db";
 import * as schema from "~/server/db/schema";
 import { api } from "~/trpc/server";
+import { Player } from "./_components/HlsPlayer";
 import { Reactions } from "./_components/Reactions";
 import { FingerPrintViewCounter } from "./_components/ViewCounter";
-import { VimoExample } from "./_components/video";
 
 export async function generateMetadata({
   params,
@@ -68,20 +68,9 @@ export default async function VideoPage({
 }: {
   params: Promise<{ id: string }>;
 }) {
-  const { id } = await params;
+  const { id: videoId } = await params;
 
-  const video = await db.query.video.findFirst({
-    where: eq(schema.video.id, id),
-    with: {
-      uploadedBy: true,
-      tags: true,
-      featuredCreators: {
-        with: {
-          creator: true,
-        },
-      },
-    },
-  });
+  const video = await api.videos.getVideo({ videoId });
 
   // Get the main creator separately if creatorId is set
   const mainCreator = video?.creatorId
@@ -94,26 +83,23 @@ export default async function VideoPage({
 
   const session = await getSession();
   if (session != null) {
-    await api.videos.view({ videoId: video.id });
+    await api.videos.view({ videoId });
   }
 
-  const { count: totalVideos } = (await db
-    .select({ count: count() })
-    .from(schema.video)
-    .where(eq(schema.video.uploadedById, video.uploadedById))
-    .then(takeFirstOrNull)) ?? { count: 0 };
+  const totalVideos =
+    (
+      await db
+        .select({ count: count() })
+        .from(schema.video)
+        .where(eq(schema.video.uploadedById, video.uploadedById))
+        .then(takeFirst)
+    )?.count ?? 0;
 
   const createdTimeAgo = formatDistanceToNow(video.createdAt);
 
-  const { count: viewsCount } = (await db
-    .select({ count: count() })
-    .from(schema.videoView)
-    .where(eq(schema.videoView.videoId, video.id))
-    .then(takeFirstOrNull)) ?? { count: 0 };
-
   const formattedViewsCount = new Intl.NumberFormat("en", {
     notation: "compact",
-  }).format(viewsCount ?? 0);
+  }).format(video.views);
 
   return (
     <main>
@@ -122,14 +108,16 @@ export default async function VideoPage({
         <div className="flex gap-6">
           <div className="grow space-y-6">
             <AspectRatio ratio={16 / 9}>
-              <VimoExample />
+              {video.transcode?.hlsSource && (
+                <Player src={video.transcode.hlsSource} />
+              )}
             </AspectRatio>
 
             <div>
               <h2 className="mb-0 pb-0 font-bold text-xl">{video.title}</h2>
               <div className="flex items-center gap-2 text-muted-foreground text-sm">
                 <p className="grow text-muted-foreground">
-                  {formattedViewsCount} view{viewsCount === 1 ? "" : "s"} |{" "}
+                  {formattedViewsCount} view{video.views === 1 ? "" : "s"} |{" "}
                   {createdTimeAgo} ago
                 </p>
 

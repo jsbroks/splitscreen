@@ -54,6 +54,17 @@ services:
           cpus: "0.5"
           memory: 1g
 
+  transcoder:
+    image: transcoder
+    build:
+      context: .
+      dockerfile: transcoder/Dockerfile
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 1g
+
 volumes:
   db_data:
   typesense_data:
