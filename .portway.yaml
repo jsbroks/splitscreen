@@ -1,0 +1,10 @@
+version: "1.0"
+default-project: splitscreen
+projects:
+  splitscreen:
+    default-environment: production
+    environments:
+      production:
+        region: yul
+        compose-files:
+        - file:compose.prod.yaml

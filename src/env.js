@@ -13,8 +13,10 @@ export const env = createEnv({
         : z.string().optional(),
 
     DATABASE_URL: z.string().url(),
+
     // S3/MinIO server-side configuration
-    S3_ENDPOINT: z.string().url().optional(),
+    S3_ENDPOINT: z.string().optional(),
+    S3_PUBLIC_URL_BASE: z.string().optional(),
     S3_REGION: z.string().optional(),
     S3_BUCKET: z.string().optional(),
     S3_ACCESS_KEY_ID: z.string().optional(),
@@ -23,9 +25,15 @@ export const env = createEnv({
       .enum(["true", "false"])
       .transform((v) => v === "true")
       .optional(),
+
     NODE_ENV: z
       .enum(["development", "test", "production"])
       .default("development"),
+
+    TYPESENSE_API_KEY: z.string().optional(),
+    TYPESENSE_HOST: z.string().optional(),
+    TYPESENSE_PORT: z.string().optional(),
+    TYPESENSE_PROTOCOL: z.enum(["http", "https"]).optional(),
   },
 
   /**
@@ -34,7 +42,7 @@ export const env = createEnv({
    * `NEXT_PUBLIC_`.
    */
   client: {
-    // NEXT_PUBLIC_CLIENTVAR: z.string(),
+    NEXT_PUBLIC_APP_URL: z.string().url().optional(),
   },
 
   /**
@@ -43,9 +51,6 @@ export const env = createEnv({
    */
   runtimeEnv: {
     BETTER_AUTH_SECRET: process.env.BETTER_AUTH_SECRET,
-    BETTER_AUTH_GITHUB_CLIENT_ID: process.env.BETTER_AUTH_GITHUB_CLIENT_ID,
-    BETTER_AUTH_GITHUB_CLIENT_SECRET:
-      process.env.BETTER_AUTH_GITHUB_CLIENT_SECRET,
     DATABASE_URL: process.env.DATABASE_URL,
     S3_ENDPOINT: process.env.S3_ENDPOINT,
     S3_REGION: process.env.S3_REGION,
@@ -53,7 +58,16 @@ export const env = createEnv({
     S3_ACCESS_KEY_ID: process.env.S3_ACCESS_KEY_ID,
     S3_SECRET_ACCESS_KEY: process.env.S3_SECRET_ACCESS_KEY,
     S3_FORCE_PATH_STYLE: process.env.S3_FORCE_PATH_STYLE,
+    S3_PUBLIC_URL_BASE: process.env.S3_PUBLIC_URL_BASE,
+
     NODE_ENV: process.env.NODE_ENV,
+
+    TYPESENSE_API_KEY: process.env.TYPESENSE_API_KEY,
+    TYPESENSE_HOST: process.env.TYPESENSE_HOST,
+    TYPESENSE_PORT: process.env.TYPESENSE_PORT,
+    TYPESENSE_PROTOCOL: process.env.TYPESENSE_PROTOCOL,
+
+    NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL,
   },
   /**
    * Run `build` or `dev` with `SKIP_ENV_VALIDATION` to skip env validation. This is especially

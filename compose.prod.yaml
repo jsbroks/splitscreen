@@ -1,0 +1,59 @@
+services:
+  app:
+    image: nextjs
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    labels:
+      portway.route.path: /
+    environment:
+      BETTER_AUTH_SECRET: voZW7ZzYqt1JWmGq
+      BETTER_AUTH_URL: https://splitscreen.ca
+
+      TYPESENSE_API_KEY: XNggQlHChW0fawET
+      TYPESENSE_HOST: typesense
+      TYPESENSE_PORT: "8108"
+      TYPESENSE_PROTOCOL: http
+    deploy:
+      resources:
+        limits:
+          cpus: 1
+          memory: 2g
+
+  db:
+    image: postgres:18-alpine
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: appdb
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    expose:
+      - 5432
+    deploy:
+      resources:
+        limits:
+          cpus: 1
+          memory: 2g
+
+  typesense:
+    image: typesense/typesense:29.0
+    environment:
+      - TYPESENSE_API_KEY=XNggQlHChW0fawET
+      - TYPESENSE_DATA_DIR=/data
+    volumes:
+      - typesense_data:/data
+    expose:
+      - 8108
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 1g
+
+volumes:
+  db_data:
+  typesense_data:

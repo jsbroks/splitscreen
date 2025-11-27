@@ -1,0 +1,16 @@
+{
+  "name": "SplitScreen",
+  "short_name": "SplitScreen",
+  "description": "Discover and share amazing video content from creators around the world",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#000000",
+  "icons": [
+    {
+      "src": "/favicon.ico",
+      "sizes": "any",
+      "type": "image/x-icon"
+    }
+  ]
+}
