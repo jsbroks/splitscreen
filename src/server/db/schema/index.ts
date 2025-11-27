@@ -1,4 +1,4 @@
 export * from "./auth";
-export * from "./stars";
+export * from "./creators";
 export * from "./queue";
 export * from "./videos";

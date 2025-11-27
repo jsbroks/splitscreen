@@ -1,60 +1,53 @@
 import { desc, eq } from "drizzle-orm";
-import Link from "next/link";
 import { notFound } from "next/navigation";
+import { VideoCard } from "~/app/_components/VideoCard";
 import { Avatar, AvatarFallback, AvatarImage } from "~/components/ui/avatar";
-import { Card } from "~/components/ui/card";
+
 import { db } from "~/server/db";
-import { user as userTable } from "~/server/db/schema/auth";
-import { video as videoTable } from "~/server/db/schema/videos";
+import * as schema from "~/server/db/schema";
 
 export default async function ProfilePage({
   params,
 }: {
-  params: { username: string };
+  params: Promise<{ username: string }>;
 }) {
-  const { username } = params;
+  const { username } = await params;
 
-  const u = await db.query.user.findFirst({
-    where: eq(userTable.username, username),
-    columns: {
-      id: true,
-      username: true,
-      displayUsername: true,
-      image: true,
-      name: true,
+  const user = await db.query.user.findFirst({
+    where: eq(schema.user.username, username),
+    with: {
+      uploadedVideos: {
+        orderBy: desc(schema.video.createdAt),
+        limit: 24,
+      },
     },
   });
-  if (!u) {
+
+  if (!user) {
     notFound();
   }
 
-  const videos = await db.query.video.findMany({
-    where: eq(videoTable.userId, u.id),
-    columns: {
-      id: true,
-      title: true,
-      status: true,
-      createdAt: true,
-    },
-    orderBy: desc(videoTable.createdAt),
-    limit: 24,
-  });
-
-  const display = u.displayUsername || u.name || u.username;
+  const videos = user.uploadedVideos ?? [];
+  const displayName = user.displayUsername ?? user.name ?? user.username;
 
   return (
     <main>
       <div className="container mx-auto max-w-7xl space-y-6 px-6 py-12">
         <div className="flex items-center gap-4">
           <Avatar className="size-16">
-            <AvatarImage alt={display ?? ""} src={u.image ?? undefined} />
+            <AvatarImage
+              alt={displayName ?? ""}
+              src={user.image ?? undefined}
+            />
             <AvatarFallback>
-              {(display ?? u.username).slice(0, 2).toUpperCase()}
+              {(user.displayUsername ?? user.name ?? user.username)
+                ?.slice(0, 2)
+                .toUpperCase()}
             </AvatarFallback>
           </Avatar>
           <div>
-            <h1 className="font-bold text-2xl">{display}</h1>
-            <p className="text-muted-foreground">@{u.username}</p>
+            <h1 className="font-bold text-2xl">{displayName}</h1>
+            <p className="text-muted-foreground">@{user.username}</p>
           </div>
         </div>
 
@@ -63,21 +56,9 @@ export default async function ProfilePage({
           {videos.length === 0 ? (
             <p className="text-muted-foreground">No videos yet.</p>
           ) : (
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
               {videos.map((v) => (
-                <Link href={`/video/${v.id}`} key={v.id}>
-                  <Card className="overflow-hidden">
-                    <div className="aspect-video w-full bg-secondary/40" />
-                    <div className="space-y-1 p-3">
-                      <div className="line-clamp-1 font-medium text-sm">
-                        {v.title}
-                      </div>
-                      <div className="text-muted-foreground text-xs">
-                        {v.status}
-                      </div>
-                    </div>
-                  </Card>
-                </Link>
+                <VideoCard key={v.id} {...v} />
               ))}
             </div>
           )}

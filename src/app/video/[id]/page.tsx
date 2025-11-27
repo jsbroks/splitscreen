@@ -1,6 +1,7 @@
 import { formatDistanceToNow } from "date-fns";
 import { UserPlus } from "lucide-react";
 import type { Metadata } from "next";
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { VideoCard } from "~/app/_components/VideoCard";
 import { AspectRatio } from "~/components/ui/aspect-ratio";
@@ -26,6 +27,7 @@ export async function generateMetadata({
     .from(schema.video)
     .where(eq(schema.video.id, id))
     .innerJoin(schema.user, eq(schema.video.uploadedById, schema.user.id))
+    .leftJoin(schema.creator, eq(schema.video.creatorId, schema.creator.id))
     .then(takeFirstOrNull);
 
   if (!result) {
@@ -35,8 +37,12 @@ export async function generateMetadata({
     };
   }
 
-  const { video, user } = result;
-  const author = video.creatorUsername ?? user.displayUsername ?? user.username;
+  const { video, user, creator } = result;
+  const author =
+    creator?.displayName ??
+    creator?.username ??
+    user.displayUsername ??
+    user.username;
   const title = `${video.title} by ${author} | Splitscreen`;
   const description = `Watch ${video.title} created ${formatDistanceToNow(video.createdAt)} ago by ${author}.`;
 
@@ -139,10 +145,12 @@ export default async function VideoPage({
                     .toUpperCase()}
                 </AvatarFallback>
               </Avatar>
-              <div className="grow">
+              <Link
+                className="block hover:text-primary"
+                href={`/profile/${video.uploadedBy.username}`}
+              >
                 <p className="font-bold">
-                  {video.creatorUsername ??
-                    video.uploadedBy.displayUsername ??
+                  {video.uploadedBy.displayUsername ??
                     video.uploadedBy.username}
                 </p>
                 <p className="text-muted-foreground text-xs">
@@ -151,7 +159,8 @@ export default async function VideoPage({
                   )}{" "}
                   video{totalVideos > 1 ? "s" : ""} | 389K Subscribers
                 </p>
-              </div>
+              </Link>
+              <div className="grow" />
               <Button className="shrink-0" size="lg" variant="outline">
                 <UserPlus className="size-4" />
                 Follow

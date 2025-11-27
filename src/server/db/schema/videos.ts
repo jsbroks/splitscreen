@@ -11,7 +11,7 @@ import {
 } from "drizzle-orm/pg-core";
 import { nanoid } from "nanoid";
 import { user } from "./auth";
-import { star } from "./stars";
+import { creator } from "./creators";
 
 export const createVideoId = () => nanoid(8);
 
@@ -51,7 +51,9 @@ export const video = pgTable("video", {
     .$onUpdate(() => /* @__PURE__ */ new Date())
     .notNull(),
 
-  creatorUsername: text("creator_username"),
+  creatorId: text("creator_id").references(() => creator.id, {
+    onDelete: "cascade",
+  }),
 });
 
 export const videoRelations = relations(video, ({ many, one }) => ({
@@ -59,33 +61,36 @@ export const videoRelations = relations(video, ({ many, one }) => ({
     fields: [video.uploadedById],
     references: [user.id],
   }),
-  stars: many(videoStar),
+  featuredCreators: many(videoFeaturedCreator),
   tags: many(videoTag),
   categories: many(videoCategory),
   views: many(videoView),
-  // reactions: many(videoReaction),
+  reactions: many(videoReaction),
 }));
 
-export const videoStar = pgTable("video_star", {
+export const videoFeaturedCreator = pgTable("video_featured_creator", {
   id: text("id").primaryKey(),
   videoId: text("video_id")
     .notNull()
     .references(() => video.id, { onDelete: "cascade" }),
-  starId: text("star_id")
+  creatorId: text("creator_id")
     .notNull()
-    .references(() => star.id, { onDelete: "cascade" }),
+    .references(() => creator.id, { onDelete: "cascade" }),
 });
 
-export const videoStarRelations = relations(videoStar, ({ one }) => ({
-  video: one(video, {
-    fields: [videoStar.videoId],
-    references: [video.id],
+export const videoFeaturedCreatorRelations = relations(
+  videoFeaturedCreator,
+  ({ one }) => ({
+    video: one(video, {
+      fields: [videoFeaturedCreator.videoId],
+      references: [video.id],
+    }),
+    creator: one(creator, {
+      fields: [videoFeaturedCreator.creatorId],
+      references: [creator.id],
+    }),
   }),
-  star: one(star, {
-    fields: [videoStar.starId],
-    references: [star.id],
-  }),
-}));
+);
 
 // Per-user/fingerprint view history for videos.
 // Either userId or fingerprintId must be set (or both for authenticated users with fingerprints).
@@ -153,6 +158,17 @@ export const videoReaction = pgTable(
     ),
   ],
 );
+
+export const videoReactionRelations = relations(videoReaction, ({ one }) => ({
+  video: one(video, {
+    fields: [videoReaction.videoId],
+    references: [video.id],
+  }),
+  user: one(user, {
+    fields: [videoReaction.userId],
+    references: [user.id],
+  }),
+}));
 
 export const tag = pgTable("tag", {
   id: text("id").primaryKey(),

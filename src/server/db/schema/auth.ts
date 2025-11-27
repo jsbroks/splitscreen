@@ -1,5 +1,6 @@
 import { relations } from "drizzle-orm";
 import { boolean, index, pgTable, text, timestamp } from "drizzle-orm/pg-core";
+import { video } from "./videos";
 
 export const user = pgTable("user", {
   id: text("id").primaryKey(),
@@ -14,6 +15,7 @@ export const user = pgTable("user", {
     .notNull(),
   username: text("username").unique(),
   displayUsername: text("display_username"),
+  isAdmin: boolean("is_admin").default(false).notNull(),
 });
 
 export const session = pgTable(
@@ -78,6 +80,7 @@ export const verification = pgTable(
 export const userRelations = relations(user, ({ many }) => ({
   sessions: many(session),
   accounts: many(account),
+  uploadedVideos: many(video),
 }));
 
 export const sessionRelations = relations(session, ({ one }) => ({

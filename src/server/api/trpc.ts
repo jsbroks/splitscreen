@@ -132,3 +132,29 @@ export const protectedProcedure = t.procedure
       },
     });
   });
+
+/**
+ * Protected procedure that checks if the user is an admin
+ */
+export const adminProcedure = protectedProcedure.use(async ({ ctx, next }) => {
+  if (!ctx.session?.user) {
+    throw new TRPCError({ code: "UNAUTHORIZED" });
+  }
+
+  const user = await ctx.db.query.user.findFirst({
+    where: (users, { eq }) => eq(users.id, ctx.session.user.id),
+  });
+
+  if (!user?.isAdmin) {
+    throw new TRPCError({
+      code: "FORBIDDEN",
+      message: "Admin access required",
+    });
+  }
+
+  return next({
+    ctx: {
+      session: { ...ctx.session, user: ctx.session.user },
+    },
+  });
+});
