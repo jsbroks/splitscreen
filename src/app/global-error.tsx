@@ -1,12 +1,6 @@
 "use client";
 
-export default function GlobalError({
-  error,
-  reset,
-}: {
-  error: Error & { digest?: string };
-  reset: () => void;
-}) {
+export default function GlobalError({ reset }: { reset: () => void }) {
   return (
     <html className="dark dark:bg-black" lang="en">
       <body>
@@ -21,6 +15,7 @@ export default function GlobalError({
             <button
               className="mt-6 inline-block rounded bg-white px-4 py-2 font-medium text-black hover:opacity-90"
               onClick={() => reset()}
+              type="button"
             >
               Try again
             </button>

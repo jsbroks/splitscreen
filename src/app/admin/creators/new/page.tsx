@@ -186,7 +186,7 @@ export default function NewCreatorPage() {
                 <FormItem>
                   <FormLabel>Birthday (Optional)</FormLabel>
                   <FormControl>
-                    <Input type="date" placeholder="YYYY-MM-DD" {...field} />
+                    <Input placeholder="YYYY-MM-DD" type="date" {...field} />
                   </FormControl>
                   <FormDescription>
                     Creator's date of birth (age will be calculated

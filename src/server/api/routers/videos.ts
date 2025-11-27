@@ -177,6 +177,8 @@ export const videosRouter = createTRPCRouter({
         description: z.string().optional(),
         filename: z.string().min(1),
         contentType: z.string().optional(),
+        creatorId: z.string().optional(),
+        featuredCreatorIds: z.array(z.string()).optional(),
       }),
     )
     .mutation(async ({ ctx, input }) => {
@@ -212,11 +214,24 @@ export const videosRouter = createTRPCRouter({
       const uploadUrl = await getSignedUrl(client, command, { expiresIn: 900 });
       await db.insert(videoTable).values({
         id: videoId,
-        userId: ctx.session.user.id,
+        uploadedById: ctx.session.user.id,
         title: input.title.trim(),
         description: input.description ?? null,
         originalKey: key,
+        creatorId: input.creatorId ?? null,
       });
+
+      // Add featured creators if provided
+      if (input.featuredCreatorIds && input.featuredCreatorIds.length > 0) {
+        await db.insert(schema.videoFeaturedCreator).values(
+          input.featuredCreatorIds.map((creatorId) => ({
+            id: nanoid(),
+            videoId: videoId,
+            creatorId: creatorId,
+          })),
+        );
+      }
+
       return { videoId, key, uploadUrl, bucket: env.S3_BUCKET };
     }),
 });

@@ -209,4 +209,49 @@ export const creatorsRouter = createTRPCRouter({
         .where(eq(schema.creatorLinks.id, input.linkId));
       return { success: true };
     }),
+
+  // Simplified creator creation for regular users (no admin required)
+  quickCreate: publicProcedure
+    .input(
+      z.object({
+        displayName: z.string().min(1).max(100),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      // Generate username from display name
+      const username = input.displayName
+        .toLowerCase()
+        .replace(/\s+/g, "_")
+        .replace(/[^a-z0-9_-]/g, "")
+        .slice(0, 50);
+
+      // Check if username already exists
+      const existingCreator = await ctx.db.query.creator.findFirst({
+        where: eq(schema.creator.username, username),
+      });
+
+      if (existingCreator) {
+        throw new TRPCError({
+          code: "CONFLICT",
+          message: "A creator with this name already exists",
+        });
+      }
+
+      const creatorId = nanoid();
+
+      // Create basic creator (users can add more details later via admin)
+      const [creator] = await ctx.db
+        .insert(schema.creator)
+        .values({
+          id: creatorId,
+          username: username || `creator_${Date.now()}`,
+          displayName: input.displayName,
+          aliases: [],
+          image: null,
+          birthday: null,
+        })
+        .returning();
+
+      return creator;
+    }),
 });

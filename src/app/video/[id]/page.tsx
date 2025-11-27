@@ -74,8 +74,20 @@ export default async function VideoPage({
     with: {
       uploadedBy: true,
       tags: true,
+      featuredCreators: {
+        with: {
+          creator: true,
+        },
+      },
     },
   });
+
+  // Get the main creator separately if creatorId is set
+  const mainCreator = video?.creatorId
+    ? await db.query.creator.findFirst({
+        where: eq(schema.creator.id, video.creatorId),
+      })
+    : null;
 
   if (!video) notFound();
 
@@ -167,6 +179,53 @@ export default async function VideoPage({
               </Button>
             </section>
 
+            {mainCreator && (
+              <section className="space-y-2">
+                <p className="text-muted-foreground text-sm">Video Creator</p>
+                <Link
+                  className="inline-flex items-center gap-2 rounded-md bg-secondary px-3 py-2 hover:bg-secondary/80"
+                  href={`/creator/${mainCreator.username}`}
+                >
+                  {mainCreator.image && (
+                    <Avatar className="size-6">
+                      <AvatarImage src={mainCreator.image} />
+                      <AvatarFallback>
+                        {mainCreator.displayName.slice(0, 2)}
+                      </AvatarFallback>
+                    </Avatar>
+                  )}
+                  <span className="font-medium">{mainCreator.displayName}</span>
+                </Link>
+              </section>
+            )}
+
+            {video.featuredCreators && video.featuredCreators.length > 0 && (
+              <section className="space-y-2">
+                <p className="text-muted-foreground text-sm">
+                  Featured Creators
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {video.featuredCreators.map(({ creator }) => (
+                    <Link
+                      className="inline-flex items-center gap-2 rounded-md bg-secondary px-3 py-2 hover:bg-secondary/80"
+                      href={`/creator/${creator.username}`}
+                      key={creator.id}
+                    >
+                      {creator.image && (
+                        <Avatar className="size-6">
+                          <AvatarImage src={creator.image} />
+                          <AvatarFallback>
+                            {creator.displayName.slice(0, 2)}
+                          </AvatarFallback>
+                        </Avatar>
+                      )}
+                      <span className="font-medium">{creator.displayName}</span>
+                    </Link>
+                  ))}
+                </div>
+              </section>
+            )}
+
             <section className="space-y-2">
               <p className="text-muted-foreground">Categories</p>
 
@@ -201,31 +260,31 @@ export default async function VideoPage({
             <section className="space-y-2">
               <p className="text-muted-foreground">Related videos</p>
               <div className="grid grid-cols-1 gap-3 md:grid-cols-3 lg:grid-cols-3">
-                <VideoCard id="1" title="Video 1" />
-                <VideoCard id="2" title="Video 2" />
-                <VideoCard id="3" title="Video 3" />
-                <VideoCard id="4" title="Video 4" />
-                <VideoCard id="5" title="Video 5" />
-                <VideoCard id="6" title="Video 6" />
-                <VideoCard id="7" title="Video 7" />
-                <VideoCard id="8" title="Video 8" />
-                <VideoCard id="9" title="Video 9" />
-                <VideoCard id="10" title="Video 10" />
+                <VideoCard id="1" title="Video 1" views={1000} />
+                <VideoCard id="2" title="Video 2" views={1000} />
+                <VideoCard id="3" title="Video 3" views={1000} />
+                <VideoCard id="4" title="Video 4" views={1000} />
+                <VideoCard id="5" title="Video 5" views={1000} />
+                <VideoCard id="6" title="Video 6" views={1000} />
+                <VideoCard id="7" title="Video 7" views={1000} />
+                <VideoCard id="8" title="Video 8" views={1000} />
+                <VideoCard id="9" title="Video 9" views={1000} />
+                <VideoCard id="10" title="Video 10" views={1000} />
               </div>
             </section>
           </div>
 
           <div className="w-[300px] shrink-0 space-y-3">
-            <VideoCard id="1" title="Video 1" />
-            <VideoCard id="2" title="Video 2" />
-            <VideoCard id="3" title="Video 3" />
-            <VideoCard id="4" title="Video 4" />
-            <VideoCard id="5" title="Video 5" />
-            <VideoCard id="6" title="Video 6" />
-            <VideoCard id="7" title="Video 7" />
-            <VideoCard id="8" title="Video 8" />
-            <VideoCard id="9" title="Video 9" />
-            <VideoCard id="10" title="Video 10" />
+            <VideoCard id="1" title="Video 1" views={1000} />
+            <VideoCard id="2" title="Video 2" views={1000} />
+            <VideoCard id="3" title="Video 3" views={1000} />
+            <VideoCard id="4" title="Video 4" views={1000} />
+            <VideoCard id="5" title="Video 5" views={1000} />
+            <VideoCard id="6" title="Video 6" views={1000} />
+            <VideoCard id="7" title="Video 7" views={1000} />
+            <VideoCard id="8" title="Video 8" views={1000} />
+            <VideoCard id="9" title="Video 9" views={1000} />
+            <VideoCard id="10" title="Video 10" views={1000} />
           </div>
         </div>
       </div>

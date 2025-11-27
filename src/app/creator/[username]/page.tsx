@@ -12,10 +12,11 @@ import {
 import { Link2 } from "lucide-react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { VideoCard } from "~/app/_components/VideoCard";
 import { Avatar, AvatarFallback, AvatarImage } from "~/components/ui/avatar";
 import { buttonVariants } from "~/components/ui/button";
 import { cn } from "~/lib/utils";
-import { db, eq } from "~/server/db";
+import { db, desc, eq } from "~/server/db";
 import * as schema from "~/server/db/schema";
 
 export default async function CreatorPage({
@@ -53,10 +54,18 @@ export default async function CreatorPage({
       })()
     : null;
 
+  const videos = await db
+    .select()
+    .from(schema.video)
+    .where(eq(schema.video.creatorId, creator.id))
+    .innerJoin(schema.user, eq(schema.video.uploadedById, schema.user.id))
+    .orderBy(desc(schema.video.createdAt))
+    .limit(24);
+
   return (
     <main>
-      <div className="container mx-auto max-w-7xl space-y-3 px-6 py-12">
-        <div className="flex items-center gap-4">
+      <div className="container mx-auto max-w-7xl space-y-10 px-6 py-12">
+        <div className="flex items-center gap-6">
           <Avatar className="size-32">
             <AvatarImage src={creator.image ?? undefined} />
             <AvatarFallback>{creator.displayName.slice(0, 2)}</AvatarFallback>
@@ -90,6 +99,19 @@ export default async function CreatorPage({
             </div>
           </div>
         </div>
+
+        <section className="space-y-3">
+          <h2 className="font-semibold text-xl">Videos</h2>
+          {videos.length === 0 ? (
+            <p className="text-muted-foreground">No videos yet.</p>
+          ) : (
+            <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+              {videos.map(({ video }) => (
+                <VideoCard key={video.id} {...video} views={0} />
+              ))}
+            </div>
+          )}
+        </section>
       </div>
     </main>
   );

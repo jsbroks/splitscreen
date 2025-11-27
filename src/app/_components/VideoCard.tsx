@@ -5,9 +5,13 @@ import Link from "next/link";
 type VideoCardProps = {
   id: string;
   title: string;
+  views: number;
 };
 
-export const VideoCard: React.FC<VideoCardProps> = ({ id, title }) => {
+export const VideoCard: React.FC<VideoCardProps> = ({ id, title, views }) => {
+  const formattedViews = new Intl.NumberFormat("en", {
+    notation: "compact",
+  }).format(views);
   return (
     <Link className="group" href={`/video/${id}`}>
       <div>
@@ -23,9 +27,10 @@ export const VideoCard: React.FC<VideoCardProps> = ({ id, title }) => {
       <h2 className="transition-colors group-hover:text-primary">{title}</h2>
       <div className="flex items-center justify-between gap-2">
         <p className="text-muted-foreground text-xs">kesppa</p>
+
         <p className="flex items-center justify-between gap-1 text-muted-foreground text-xs">
           <Eye className="size-2" />
-          <span>100k</span>
+          <span>{formattedViews}</span>
         </p>
       </div>
     </Link>

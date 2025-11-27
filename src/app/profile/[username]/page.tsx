@@ -58,7 +58,7 @@ export default async function ProfilePage({
           ) : (
             <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
               {videos.map((v) => (
-                <VideoCard key={v.id} {...v} />
+                <VideoCard key={v.id} {...v} views={0} />
               ))}
             </div>
           )}

@@ -5,6 +5,8 @@ import { useCallback, useState } from "react";
 import { useDropzone } from "react-dropzone";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
+import { MultiSelectCreator } from "~/components/MultiSelectCreator";
+import { SingleSelectCreator } from "~/components/SingleSelectCreator";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
@@ -14,11 +16,16 @@ import { api } from "~/trpc/react";
 type FormValues = {
   title: string;
   description?: string;
+  creatorId?: string;
+  featuredCreatorIds?: string[];
 };
 
 export default function UploadPage() {
   const router = useRouter();
   const generateUrl = api.videos.generateUploadUrl.useMutation();
+  const { data: creators } = api.creators.list.useQuery();
+  const createCreatorMutation = api.creators.quickCreate.useMutation();
+
   const {
     register,
     handleSubmit,
@@ -28,6 +35,10 @@ export default function UploadPage() {
 
   const [videoFile, setVideoFile] = useState<File | null>(null);
   const [thumbFile, setThumbFile] = useState<File | null>(null);
+  const [selectedCreator, setSelectedCreator] = useState<string>("");
+  const [selectedFeaturedCreators, setSelectedFeaturedCreators] = useState<
+    string[]
+  >([]);
 
   const onDropVideo = useCallback((accepted: File[]) => {
     setVideoFile(accepted?.[0] ?? null);
@@ -65,13 +76,69 @@ export default function UploadPage() {
         toast.error("Please select a video file to upload.");
         return;
       }
+
+      // Identify new creators that need to be created
+      const existingCreatorIds = new Set(creators?.map((c) => c.id) ?? []);
+      const newCreatorNames: string[] = [];
+      let finalCreatorId = selectedCreator;
+      const finalFeaturedIds: string[] = [];
+
+      // Handle main creator
+      if (selectedCreator && !existingCreatorIds.has(selectedCreator)) {
+        newCreatorNames.push(selectedCreator);
+      } else if (selectedCreator) {
+        finalCreatorId = selectedCreator;
+      }
+
+      // Handle featured creators
+      for (const creatorValue of selectedFeaturedCreators) {
+        if (!existingCreatorIds.has(creatorValue)) {
+          newCreatorNames.push(creatorValue);
+        } else {
+          finalFeaturedIds.push(creatorValue);
+        }
+      }
+
+      // Create all new creators
+      const createdCreatorMap = new Map<string, string>();
+      for (const creatorName of newCreatorNames) {
+        try {
+          const newCreator = await createCreatorMutation.mutateAsync({
+            displayName: creatorName,
+          });
+          if (newCreator) {
+            createdCreatorMap.set(creatorName, newCreator.id);
+          }
+        } catch {
+          toast.error(`Failed to create creator "${creatorName}"`);
+          return;
+        }
+      }
+
+      // Map all selections to IDs
+      if (selectedCreator && createdCreatorMap.has(selectedCreator)) {
+        const createdId = createdCreatorMap.get(selectedCreator);
+        if (createdId) finalCreatorId = createdId;
+      }
+
+      for (const creatorValue of selectedFeaturedCreators) {
+        if (createdCreatorMap.has(creatorValue)) {
+          const createdId = createdCreatorMap.get(creatorValue);
+          if (createdId) finalFeaturedIds.push(createdId);
+        }
+      }
+
       // Request presigned URL via tRPC
       const sign = await generateUrl.mutateAsync({
         title: values.title,
         description: values.description,
         filename: videoFile.name,
         contentType: videoFile.type || "application/octet-stream",
+        creatorId: finalCreatorId || undefined,
+        featuredCreatorIds:
+          finalFeaturedIds.length > 0 ? finalFeaturedIds : undefined,
       });
+
       // Upload directly to S3
       const put = await fetch(sign.uploadUrl, {
         method: "PUT",
@@ -88,6 +155,8 @@ export default function UploadPage() {
       reset();
       setVideoFile(null);
       setThumbFile(null);
+      setSelectedCreator("");
+      setSelectedFeaturedCreators([]);
       // Navigate to the video page if it exists, else back to home
       router.push(`/video/${sign.videoId}`);
     } catch (e) {
@@ -117,6 +186,35 @@ export default function UploadPage() {
               {...register("description")}
             />
           </div>
+
+          <div className="space-y-2">
+            <Label>Video Creator (Optional)</Label>
+            <SingleSelectCreator
+              creators={creators ?? []}
+              onChange={setSelectedCreator}
+              placeholder="Type to search or create a new creator..."
+              value={selectedCreator}
+            />
+            <p className="text-muted-foreground text-xs">
+              Original creator of the video. Type a name and press Enter to
+              create a new one.
+            </p>
+          </div>
+
+          <div className="space-y-2">
+            <Label>Featured Creators (Optional)</Label>
+            <MultiSelectCreator
+              creators={creators ?? []}
+              onChange={setSelectedFeaturedCreators}
+              placeholder="Type to search or create new creators..."
+              values={selectedFeaturedCreators}
+            />
+            <p className="text-muted-foreground text-xs">
+              Creators who appear in this video. Type names and press Enter to
+              create new ones.
+            </p>
+          </div>
+
           <div className="space-y-2">
             <Label>Video file</Label>
             <div
