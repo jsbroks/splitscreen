@@ -9,9 +9,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "~/components/ui/select";
-import { api, HydrateClient } from "~/trpc/server";
+import { HydrateClient } from "~/trpc/server";
 import { CategoriesCarousel } from "./_components/CategoriesCarousel";
-import { VideoCard } from "./_components/VideoCard";
+import { InfiniteVideoGrid } from "./_components/InfiniteVideoGrid";
 
 const SITE_NAME = "SplitScreen";
 const SITE_DESCRIPTION =
@@ -86,9 +86,7 @@ export const metadata: Metadata = {
   manifest: "/site.webmanifest",
 };
 
-export default async function Home() {
-  const videos = await api.videos.videos({ limit: 24, offset: 0 });
-
+export default function Home() {
   // Structured data for SEO
   const structuredData = {
     "@context": "https://schema.org",
@@ -148,16 +146,7 @@ export default async function Home() {
           </div>
           <CategoriesCarousel />
 
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
-            {videos.map((video) => (
-              <VideoCard
-                key={video.id}
-                previewVideoUrl={video.transcode?.hoverPreviewWebm}
-                thumbnail25pctUrl={video.transcode?.thumbnail25pct}
-                {...video}
-              />
-            ))}
-          </div>
+          <InfiniteVideoGrid orderBy="newest" />
         </div>
       </main>
     </HydrateClient>

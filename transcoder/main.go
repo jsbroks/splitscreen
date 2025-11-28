@@ -267,11 +267,22 @@ func processJob(
 	}
 	log.Info("source video info", "id", j.ID, "width", sourceInfo.Width, "height", sourceInfo.Height, "duration", sourceInfo.DurationSec)
 
-	// Update video metadata (duration)
+	// Get file size
+	var fileSizeBytes int64
+	if fileInfo, err := os.Stat(localInputPath); err != nil {
+		log.Warn("failed to get file size", "id", j.ID, "error", err)
+		fileSizeBytes = 0
+	} else {
+		fileSizeBytes = fileInfo.Size()
+	}
+
+	// Update video metadata (duration and size)
 	durationSecs := int(sourceInfo.DurationSec)
-	if err := db.UpdateVideoMetadata(ctx, sqlDB, j.VideoID, durationSecs, 0); err != nil {
+	if err := db.UpdateVideoMetadata(ctx, sqlDB, j.VideoID, durationSecs, fileSizeBytes); err != nil {
 		log.Error("failed to update video metadata", "id", j.ID, "video", j.VideoID, "error", err)
 		// Continue anyway, don't fail the job for this
+	} else {
+		log.Info("updated video metadata", "id", j.ID, "duration_secs", durationSecs, "size_bytes", fileSizeBytes)
 	}
 
 	// Filter renditions to prevent upscaling
