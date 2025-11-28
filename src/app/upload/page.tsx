@@ -293,6 +293,8 @@ export default function UploadPage() {
                 tags={tags ?? []}
                 values={selectedTags}
               />
+
+              {JSON.stringify(selectedTags)}
               <p className="text-muted-foreground text-xs">
                 Tags for categorizing this video. Type tag names and press Enter
                 to create new ones.

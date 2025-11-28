@@ -182,12 +182,32 @@ func (c *Command) Output(path string) *Command {
 }
 
 func (c *Command) buildArgs() []string {
+	// Find the output path (last added via Output())
+	// We need to insert filter args BEFORE the output path
+	var outputPath string
+	argsWithoutOutput := c.args
+	
+	// Check if we have args and the last one looks like an output path
+	// (doesn't start with -)
+	if len(c.args) > 0 && !strings.HasPrefix(c.args[len(c.args)-1], "-") {
+		outputPath = c.args[len(c.args)-1]
+		argsWithoutOutput = c.args[:len(c.args)-1]
+	}
+	
 	args := make([]string, 0, len(c.args)+2)
-	args = append(args, c.args...)
+	args = append(args, argsWithoutOutput...)
+	
+	// Add filters before output path
 	if len(c.filters) > 0 {
 		joined := strings.Join(c.filters, ",")
 		args = append(args, "-vf", joined)
 	}
+	
+	// Add output path last
+	if outputPath != "" {
+		args = append(args, outputPath)
+	}
+	
 	return args
 }
 

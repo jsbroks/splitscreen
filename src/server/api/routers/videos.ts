@@ -10,8 +10,10 @@ import {
   asc,
   count,
   db,
+  desc,
   eq,
   gt,
+  inArray,
   takeFirst,
   takeFirstOrNull,
 } from "~/server/db";
@@ -304,7 +306,11 @@ export const videosRouter = createTRPCRouter({
             orderBy: [asc(schema.transcodeQueue.createdAt)],
           },
           uploadedBy: true,
-          tags: true,
+          tags: {
+            with: {
+              tag: true,
+            },
+          },
           featuredCreators: {
             with: {
               creator: true,
@@ -335,15 +341,105 @@ export const videosRouter = createTRPCRouter({
         ? `${env.S3_ENDPOINT}/${env.S3_BUCKET}/${transcode.outputPrefix}/hover.webm`
         : null;
 
+      const thumbnailsVtt = transcode
+        ? `${env.S3_ENDPOINT}/${env.S3_BUCKET}/${transcode.outputPrefix}/thumbnails.vtt`
+        : null;
+
       return {
         ...video,
         transcode: {
           ...(transcode ?? {}),
-          hlsSource: hlsSource,
-          hoverPreviewMp4: hoverPreviewMp4,
-          hoverPreviewWebm: hoverPreviewWebm,
+          hlsSource,
+          hoverPreviewMp4,
+          hoverPreviewWebm,
+          thumbnailsVtt,
         },
         views: views?.count ?? 0,
       };
+    }),
+
+  videos: publicProcedure
+    .input(
+      z.object({
+        limit: z.number().optional(),
+        offset: z.number().optional(),
+        status: z
+          .enum([
+            "uploaded",
+            "processing",
+            "in_review",
+            "approved",
+            "rejected",
+            "failed",
+          ])
+          .array()
+          .optional(),
+      }),
+    )
+    .query(async ({ ctx, input }) => {
+      let isAdmin = false;
+      if (ctx.session?.user) {
+        const user = await ctx.db.query.user.findFirst({
+          where: (users, { eq }) => eq(users.id, ctx.session?.user.id ?? ""),
+        });
+
+        isAdmin = user?.isAdmin ?? false;
+      }
+
+      const status = input.status ?? (isAdmin ? null : ["approved"]);
+      const videos = await ctx.db.query.video.findMany({
+        orderBy: [desc(schema.video.createdAt)],
+        where: status ? inArray(schema.video.status, status) : undefined,
+        with: {
+          transcodeQueue: {
+            orderBy: [asc(schema.transcodeQueue.createdAt)],
+          },
+        },
+        limit: input.limit ?? 24,
+        offset: input.offset ?? 0,
+      });
+
+      const views = await ctx.db
+        .select({ videoId: schema.videoView.videoId, count: count() })
+        .from(schema.videoView)
+        .groupBy(schema.videoView.videoId);
+
+      return videos.map((v) => {
+        const viewsCount = views.find((v2) => v2.videoId === v.id)?.count ?? 0;
+        const transcode = v.transcodeQueue[0];
+        const hlsSource = transcode
+          ? `${env.S3_ENDPOINT}/${env.S3_BUCKET}/${transcode.outputPrefix}/master.m3u8`
+          : null;
+
+        const hoverPreviewMp4 = transcode
+          ? `${env.S3_ENDPOINT}/${env.S3_BUCKET}/${transcode.outputPrefix}/hover.mp4`
+          : null;
+        const hoverPreviewWebm = transcode
+          ? `${env.S3_ENDPOINT}/${env.S3_BUCKET}/${transcode.outputPrefix}/hover.webm`
+          : null;
+
+        const thumbnailsVtt = transcode
+          ? `${env.S3_ENDPOINT}/${env.S3_BUCKET}/${transcode.outputPrefix}/thumbnails.vtt`
+          : null;
+
+        const thumbnail25pct = transcode
+          ? `${env.S3_ENDPOINT}/${env.S3_BUCKET}/${transcode.outputPrefix}/thumb_25pct.jpg`
+          : null;
+
+        console.log(thumbnail25pct);
+
+        return {
+          ...v,
+          views: viewsCount,
+          transcode: {
+            ...v.transcodeQueue[0],
+            thumbnailsVtt,
+            hoverPreviewWebm,
+            hoverPreviewMp4,
+            hlsSource,
+            thumbnail25pct,
+          },
+        };
+      });
     }),
 });

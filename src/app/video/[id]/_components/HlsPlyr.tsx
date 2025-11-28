@@ -7,7 +7,13 @@ import { useEffect, useRef } from "react";
 import "plyr/dist/plyr.css";
 import "~/styles/plyr.css";
 
-export default function HlsPlyr({ src }: { src: string }) {
+export default function HlsPlyr({
+  src,
+  previewThumbnails,
+}: {
+  src: string;
+  previewThumbnails?: string;
+}) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const plyrRef = useRef<Plyr | null>(null);
   const hlsRef = useRef<Hls | null>(null);
@@ -32,6 +38,12 @@ export default function HlsPlyr({ src }: { src: string }) {
         "fullscreen",
       ],
       settings: ["quality", "speed"],
+      previewThumbnails: previewThumbnails
+        ? {
+            enabled: true,
+            src: previewThumbnails,
+          }
+        : undefined,
     };
 
     const video = videoRef.current;
@@ -118,7 +130,7 @@ export default function HlsPlyr({ src }: { src: string }) {
         plyrRef.current.destroy();
       }
     };
-  }, [src]);
+  }, [previewThumbnails, src]);
 
   if (
     !Hls.isSupported() &&

@@ -12,8 +12,15 @@ const config = {
         protocol: "https",
         hostname: "**",
       },
+      {
+        protocol: "http",
+        hostname: "**",
+      },
     ],
+    unoptimized: process.env.NODE_ENV === "development",
   },
+
+  allowedDevOrigins: ["localhost:9000", "127.0.0.1:9000", "[::1]:9000"],
 };
 
 export default config;

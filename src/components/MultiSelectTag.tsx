@@ -2,7 +2,7 @@
 
 import { useCombobox, useMultipleSelection } from "downshift";
 import { Check, X } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { Input } from "~/components/ui/input";
 import { cn } from "~/lib/utils";
 
@@ -26,6 +26,7 @@ export function MultiSelectTag({
   placeholder = "Select tags...",
 }: Props) {
   const [inputValue, setInputValue] = useState("");
+  const pendingNewTagRef = useRef<string | null>(null);
 
   // Separate selected values into existing tags and new ones
   const selectedTags = useMemo(() => {
@@ -86,26 +87,48 @@ export function MultiSelectTag({
         setInputValue("");
       }
     },
-    // Allow creating new items by pressing Enter
-    onIsOpenChange: ({ isOpen: newIsOpen, inputValue: currentInput }) => {
+    onStateChange: ({ type }) => {
+      // Handle creating new tag after state change
       if (
-        !newIsOpen &&
-        currentInput &&
-        currentInput.trim() &&
-        !filteredTags.find(
-          (t) => t.name.toLowerCase() === currentInput.toLowerCase().trim(),
-        ) &&
-        !values.includes(currentInput.trim())
+        type === useCombobox.stateChangeTypes.InputKeyDownEnter &&
+        pendingNewTagRef.current
       ) {
-        // User pressed Enter with a value that doesn't match any tag
-        onChange([...values, currentInput.trim()]);
+        onChange([...values, pendingNewTagRef.current]);
+        pendingNewTagRef.current = null;
         setInputValue("");
       }
     },
     stateReducer: (state, actionAndChanges) => {
       const { changes, type } = actionAndChanges;
       switch (type) {
-        case useCombobox.stateChangeTypes.InputKeyDownEnter:
+        case useCombobox.stateChangeTypes.InputKeyDownEnter: {
+          // Check if we should create a new tag
+          const trimmedInput = state.inputValue?.trim();
+          if (
+            trimmedInput &&
+            state.highlightedIndex < 0 && // No item is highlighted
+            !filteredTags.find(
+              (t) => t.name.toLowerCase() === trimmedInput.toLowerCase(),
+            ) &&
+            !values.includes(trimmedInput)
+          ) {
+            // Mark as pending new tag (will be handled in onStateChange)
+            pendingNewTagRef.current = trimmedInput;
+            return {
+              ...changes,
+              isOpen: true,
+              highlightedIndex: -1,
+              inputValue: "",
+            };
+          }
+          // Selecting an existing tag
+          return {
+            ...changes,
+            isOpen: true,
+            highlightedIndex: state.highlightedIndex,
+            inputValue: "",
+          };
+        }
         case useCombobox.stateChangeTypes.ItemClick:
           return {
             ...changes,
@@ -170,10 +193,7 @@ export function MultiSelectTag({
               className="flex items-center gap-1 rounded-md bg-secondary px-2 py-1 text-sm"
               key={item.id}
             >
-              <span>
-                {item.name}
-                {item.isNew && " (new)"}
-              </span>
+              <span>{item.name}</span>
               <button
                 className="ml-1 rounded-sm hover:bg-secondary-foreground/20"
                 onClick={() => handleRemove(item.id)}

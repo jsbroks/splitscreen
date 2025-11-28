@@ -15,13 +15,23 @@ type Rendition struct {
 	CRF              int // e.g., 21–28; lower = higher quality
 }
 
+type VideoInfo struct {
+	Width        int
+	Height       int
+	DurationSec  float64
+	AvgFrameRate float64
+}
+
 type Transcoder interface {
+	// ProbeVideo returns information about the source video
+	ProbeVideo(ctx context.Context, inputPath string) (VideoInfo, error)
 	// TranscodeHLS writes variant playlists/segments into outDir following the ladder.
 	TranscodeHLS(ctx context.Context, inputPath, outDir string, ladder []Rendition) error
 	// GeneratePoster captures a single frame thumbnail at the given offset.
 	GeneratePoster(ctx context.Context, inputPath, outPath string, at time.Duration, width int) error
-	// GenerateSpriteAndVTT creates a thumbnail sprite sheet and matching WebVTT.
-	GenerateSpriteAndVTT(ctx context.Context, inputPath, spritePath, vttPath string, cols, rows, thumbWidth int, fps float64) error
+	// GenerateThumbnailsAndVTT creates individual thumbnail images and a WebVTT file for scrubber previews.
+	// It automatically determines the interval based on video duration and calculates width from height.
+	GenerateThumbnailsAndVTT(ctx context.Context, inputPath, outDir, vttPath string, thumbHeight int, maxThumbnails int) error
 	// GenerateHoverPreview creates a short muted teaser video in WebM/MP4.
 	GenerateHoverPreview(ctx context.Context, inputPath, outWebM, outMP4 string, duration time.Duration, width int, fps int) error
 }

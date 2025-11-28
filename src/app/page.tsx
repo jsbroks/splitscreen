@@ -9,9 +9,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "~/components/ui/select";
-import { db, desc } from "~/server/db";
-import * as schema from "~/server/db/schema";
-import { HydrateClient } from "~/trpc/server";
+import { api, HydrateClient } from "~/trpc/server";
 import { CategoriesCarousel } from "./_components/CategoriesCarousel";
 import { VideoCard } from "./_components/VideoCard";
 
@@ -89,11 +87,7 @@ export const metadata: Metadata = {
 };
 
 export default async function Home() {
-  const videos = await db
-    .select()
-    .from(schema.video)
-    .orderBy(desc(schema.video.createdAt))
-    .limit(24);
+  const videos = await api.videos.videos({ limit: 24, offset: 0 });
 
   // Structured data for SEO
   const structuredData = {
@@ -156,7 +150,13 @@ export default async function Home() {
 
           <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
             {videos.map((video) => (
-              <VideoCard key={video.id} {...video} views={0} />
+              <VideoCard
+                key={video.id}
+                previewVideoUrl={video.transcode?.hoverPreviewWebm}
+                thumbnail25pctUrl={video.transcode?.thumbnail25pct}
+                {...video}
+                status={video.status}
+              />
             ))}
           </div>
         </div>

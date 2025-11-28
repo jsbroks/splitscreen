@@ -3,7 +3,6 @@ import { UserPlus } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { CreatorLink } from "~/app/_components/CreatorBadge";
 import { VideoCard } from "~/app/_components/VideoCard";
 import { AspectRatio } from "~/components/ui/aspect-ratio";
 import { Avatar, AvatarFallback, AvatarImage } from "~/components/ui/avatar";
@@ -14,6 +13,7 @@ import * as schema from "~/server/db/schema";
 import { api } from "~/trpc/server";
 import { Player } from "./_components/HlsPlayer";
 import { Reactions } from "./_components/Reactions";
+import { VideoInfoCard } from "./_components/VideoInfoCard";
 import { FingerPrintViewCounter } from "./_components/ViewCounter";
 
 export async function generateMetadata({
@@ -95,12 +95,6 @@ export default async function VideoPage({
         .then(takeFirst)
     )?.count ?? 0;
 
-  const createdTimeAgo = formatDistanceToNow(video.createdAt);
-
-  const formattedViewsCount = new Intl.NumberFormat("en", {
-    notation: "compact",
-  }).format(video.views);
-
   return (
     <main>
       {session == null && <FingerPrintViewCounter videoId={video.id} />}
@@ -109,134 +103,104 @@ export default async function VideoPage({
           <div className="grow space-y-6">
             <AspectRatio ratio={16 / 9}>
               {video.transcode?.hlsSource && (
-                <Player src={video.transcode.hlsSource} />
+                <Player
+                  previewThumbnails={
+                    video.transcode?.thumbnailsVtt ?? undefined
+                  }
+                  src={video.transcode.hlsSource}
+                />
               )}
             </AspectRatio>
 
-            <div>
-              <h2 className="mb-0 pb-0 font-bold text-xl">{video.title}</h2>
-              <div className="flex items-center gap-2 text-muted-foreground text-sm">
-                <p className="grow text-muted-foreground">
-                  {formattedViewsCount} view{video.views === 1 ? "" : "s"} |{" "}
-                  {createdTimeAgo} ago
-                </p>
-
-                <div className="mr-4">
-                  <Reactions videoId={video.id} />
-                </div>
-
-                <Button size="sm" variant="outline">
-                  Share
-                </Button>
-                <Button size="sm" variant="outline">
-                  Report
-                </Button>
+            <section className="flex items-center gap-4">
+              <div className="flex items-center gap-2">
+                <Avatar className="size-9 shrink-0">
+                  <AvatarImage src={video.uploadedBy.image ?? undefined} />
+                  <AvatarFallback className="size-9">
+                    {(
+                      video.uploadedBy.displayUsername ??
+                      video.uploadedBy.username
+                    )
+                      ?.slice(0, 2)
+                      .toUpperCase()}
+                  </AvatarFallback>
+                </Avatar>
+                <Link
+                  className="block hover:text-primary"
+                  href={`/profile/${video.uploadedBy.username}`}
+                >
+                  <p className="font-bold">
+                    {video.uploadedBy.displayUsername ??
+                      video.uploadedBy.username}
+                  </p>
+                  <p className="text-muted-foreground text-xs">
+                    {new Intl.NumberFormat("en", {
+                      notation: "compact",
+                    }).format(totalVideos ?? 0)}{" "}
+                    video{totalVideos > 1 ? "s" : ""} | 389K Subscribers
+                  </p>
+                </Link>
               </div>
-            </div>
 
-            <section className="flex items-center gap-2">
-              <Avatar className="size-9 shrink-0">
-                <AvatarImage src={video.uploadedBy.image ?? undefined} />
-                <AvatarFallback className="size-9">
-                  {(
-                    video.uploadedBy.displayUsername ??
-                    video.uploadedBy.username
-                  )
-                    ?.slice(0, 2)
-                    .toUpperCase()}
-                </AvatarFallback>
-              </Avatar>
-              <Link
-                className="block hover:text-primary"
-                href={`/profile/${video.uploadedBy.username}`}
+              <Button
+                className="shrink-0 rounded-full"
+                size="lg"
+                variant="outline"
               >
-                <p className="font-bold">
-                  {video.uploadedBy.displayUsername ??
-                    video.uploadedBy.username}
-                </p>
-                <p className="text-muted-foreground text-xs">
-                  {new Intl.NumberFormat("en", { notation: "compact" }).format(
-                    totalVideos ?? 0,
-                  )}{" "}
-                  video{totalVideos > 1 ? "s" : ""} | 389K Subscribers
-                </p>
-              </Link>
-              <div className="grow" />
-              <Button className="shrink-0" size="lg" variant="outline">
                 <UserPlus className="size-4" />
                 Follow
               </Button>
+
+              <div className="grow" />
+
+              <div>
+                <Reactions videoId={video.id} />
+              </div>
+
+              <div className="flex items-center gap-2">
+                <Button className="rounded-full" size="sm" variant="outline">
+                  Share
+                </Button>
+                <Button className="rounded-full" size="sm" variant="outline">
+                  Report
+                </Button>
+              </div>
             </section>
 
-            {mainCreator && (
-              <section className="space-y-2">
-                <p className="text-muted-foreground text-sm">Video Creator</p>
-                <CreatorLink creator={mainCreator} />
-              </section>
-            )}
+            <VideoInfoCard
+              createdAt={video.createdAt}
+              featuredCreators={video.featuredCreators}
+              mainCreator={mainCreator ?? null}
+              views={video.views}
+            />
 
-            {video.featuredCreators && video.featuredCreators.length > 0 && (
+            {video.tags.length > 0 && (
               <section className="space-y-2">
-                <p className="text-muted-foreground text-sm">
-                  Featured Creators
-                </p>
+                <p className="text-muted-foreground">Tags</p>
+
                 <div className="flex flex-wrap gap-2">
-                  {video.featuredCreators.map(({ creator }) => (
-                    <CreatorLink creator={creator} key={creator.id} />
+                  {video.tags.map((tag) => (
+                    <Button key={tag.id} variant="secondary">
+                      {tag.tag.name}
+                    </Button>
                   ))}
                 </div>
               </section>
             )}
-
-            <section className="space-y-2">
-              <p className="text-muted-foreground">Categories</p>
-
-              <div className="flex flex-wrap gap-2">
-                <Button variant="secondary">PMV</Button>
-                <Button variant="secondary">Vlog</Button>
-                <Button variant="secondary">Cute vs Slut</Button>
-                <Button variant="secondary">Cute vs Slut</Button>
-                <Button variant="secondary">Cute vs Slut</Button>
-                <Button variant="secondary">Cute vs Slut</Button>
-                <Button variant="secondary">Cute vs Slut</Button>
-                <Button variant="secondary">Cute vs Slut</Button>
-                <Button variant="secondary">Cute vs Slut</Button>
-                <Button variant="secondary">Cute vs Slut</Button>
-                <Button variant="secondary">Cute vs Slut</Button>
-                <Button variant="secondary">Cute vs Slut</Button>
-                <Button variant="secondary">Cute vs Slut</Button>
-                <Button variant="secondary">Cute vs Slut</Button>
-                <Button variant="secondary">Cute vs Slut</Button>
-              </div>
-            </section>
-
-            <button
-              className="flex w-full cursor-pointer items-center gap-5 text-muted-foreground"
-              type="button"
-            >
-              <span className="grow border-muted-foreground/50 border-b" />{" "}
-              <span className="shrink-0 text-sm uppercase">View more</span>{" "}
-              <span className="grow border-muted-foreground/50 border-b" />
-            </button>
-
-            <section className="space-y-2">
-              <p className="text-muted-foreground">Related videos</p>
-              <div className="grid grid-cols-1 gap-3 md:grid-cols-3 lg:grid-cols-3">
-                <VideoCard id="1" title="Video 1" views={1000} />
-                <VideoCard id="2" title="Video 2" views={1000} />
-                <VideoCard id="3" title="Video 3" views={1000} />
-                <VideoCard id="4" title="Video 4" views={1000} />
-                <VideoCard id="5" title="Video 5" views={1000} />
-                <VideoCard id="6" title="Video 6" views={1000} />
-                <VideoCard id="7" title="Video 7" views={1000} />
-                <VideoCard id="8" title="Video 8" views={1000} />
-                <VideoCard id="9" title="Video 9" views={1000} />
-                <VideoCard id="10" title="Video 10" views={1000} />
-              </div>
-            </section>
           </div>
 
-          <div className="w-[300px] shrink-0 space-y-3">
+          <div className="hidden w-[300px] shrink-0 lg:block">
+            <div className="grid grid-cols-1 gap-3">
+              <VideoCard id="1" title="Video 1" views={1000} />
+              <VideoCard id="2" title="Video 2" views={1000} />
+              <VideoCard id="3" title="Video 3" views={1000} />
+            </div>
+          </div>
+        </div>
+
+        <section className="space-y-2 py-4">
+          <p className="text-muted-foreground">Related videos</p>
+          <div className="grid grid-cols-2 gap-3 md:grid-cols-4 lg:grid-cols-4">
             <VideoCard id="1" title="Video 1" views={1000} />
             <VideoCard id="2" title="Video 2" views={1000} />
             <VideoCard id="3" title="Video 3" views={1000} />
@@ -248,7 +212,7 @@ export default async function VideoPage({
             <VideoCard id="9" title="Video 9" views={1000} />
             <VideoCard id="10" title="Video 10" views={1000} />
           </div>
-        </div>
+        </section>
       </div>
     </main>
   );
