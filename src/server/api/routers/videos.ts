@@ -14,6 +14,8 @@ import {
   eq,
   gt,
   inArray,
+  isNull,
+  type SQL,
   takeFirst,
   takeFirstOrNull,
 } from "~/server/db";
@@ -326,7 +328,10 @@ export const videosRouter = createTRPCRouter({
     )
     .query(async ({ ctx, input }) => {
       const video = await ctx.db.query.video.findFirst({
-        where: eq(schema.video.id, input.videoId),
+        where: and(
+          eq(schema.video.id, input.videoId),
+          isNull(schema.video.deletedAt),
+        ),
         with: {
           transcodeQueue: {
             orderBy: [asc(schema.transcodeQueue.createdAt)],
@@ -397,6 +402,7 @@ export const videosRouter = createTRPCRouter({
   videos: publicProcedure
     .input(
       z.object({
+        uploadedById: z.string().optional(),
         limit: z.number().optional(),
         offset: z.number().optional(),
         status: z
@@ -422,10 +428,24 @@ export const videosRouter = createTRPCRouter({
         isAdmin = user?.isAdmin ?? false;
       }
 
-      const status = input.status ?? (isAdmin ? null : ["approved"]);
+      let where: SQL<unknown> | undefined;
+
+      // Filter out deleted videos
+      where = and(where, isNull(schema.video.deletedAt));
+
+      if (input.uploadedById) {
+        where = and(where, eq(schema.video.uploadedById, input.uploadedById));
+      }
+
+      if (input.status) {
+        where = and(where, inArray(schema.video.status, input.status));
+      } else if (!isAdmin) {
+        where = and(where, eq(schema.video.status, "approved"));
+      }
+
       const videos = await ctx.db.query.video.findMany({
         orderBy: [desc(schema.video.createdAt)],
-        where: status ? inArray(schema.video.status, status) : undefined,
+        where,
         with: {
           transcodeQueue: {
             orderBy: [asc(schema.transcodeQueue.createdAt)],
@@ -480,5 +500,48 @@ export const videosRouter = createTRPCRouter({
           },
         };
       });
+    }),
+
+  deleteVideo: protectedProcedure
+    .input(
+      z.object({
+        videoId: z.string().min(1),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      // Get the video to check ownership
+      const video = await ctx.db.query.video.findFirst({
+        where: eq(schema.video.id, input.videoId),
+      });
+
+      if (!video) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Video not found",
+        });
+      }
+
+      // Check if user is the uploader or an admin
+      const user = await ctx.db.query.user.findFirst({
+        where: eq(schema.user.id, ctx.session.user.id),
+      });
+
+      const isUploader = video.uploadedById === ctx.session.user.id;
+      const isAdmin = user?.isAdmin ?? false;
+
+      if (!isUploader && !isAdmin) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "You don't have permission to delete this video",
+        });
+      }
+
+      // Soft delete by setting deletedAt timestamp
+      await ctx.db
+        .update(schema.video)
+        .set({ deletedAt: new Date() })
+        .where(eq(schema.video.id, input.videoId));
+
+      return { success: true };
     }),
 });

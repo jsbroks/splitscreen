@@ -5,6 +5,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "~/components/ui/avatar";
 
 import { db } from "~/server/db";
 import * as schema from "~/server/db/schema";
+import { api } from "~/trpc/server";
 
 export default async function ProfilePage({
   params,
@@ -27,7 +28,10 @@ export default async function ProfilePage({
     notFound();
   }
 
-  const videos = user.uploadedVideos ?? [];
+  const videos = await api.videos.videos({
+    uploadedById: user.id,
+    limit: 24,
+  });
   const displayName = user.displayUsername ?? user.name ?? user.username;
 
   return (
@@ -56,9 +60,14 @@ export default async function ProfilePage({
           {videos.length === 0 ? (
             <p className="text-muted-foreground">No videos yet.</p>
           ) : (
-            <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+            <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-4">
               {videos.map((v) => (
-                <VideoCard key={v.id} {...v} views={0} />
+                <VideoCard
+                  key={v.id}
+                  previewVideoUrl={v.transcode?.hoverPreviewWebm}
+                  thumbnail25pctUrl={v.transcode?.thumbnail25pct}
+                  {...v}
+                />
               ))}
             </div>
           )}

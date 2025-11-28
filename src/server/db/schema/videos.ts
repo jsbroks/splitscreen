@@ -58,6 +58,8 @@ export const video = pgTable("video", {
   creatorId: text("creator_id").references(() => creator.id, {
     onDelete: "cascade",
   }),
+
+  deletedAt: timestamp("deleted_at"),
 });
 
 export const videoRelations = relations(video, ({ many, one }) => ({

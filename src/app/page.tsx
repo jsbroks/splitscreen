@@ -155,8 +155,6 @@ export default async function Home() {
                 previewVideoUrl={video.transcode?.hoverPreviewWebm}
                 thumbnail25pctUrl={video.transcode?.thumbnail25pct}
                 {...video}
-                status={video.status}
-                thumbnailUrl={video.thumbnailUrl}
               />
             ))}
           </div>

@@ -66,7 +66,7 @@ export default function VidPlyr({
         plyrRef.current = null;
       }
     };
-  }, []);
+  }, [previewThumbnails]);
 
   return (
     <video

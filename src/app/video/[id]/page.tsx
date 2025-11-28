@@ -14,6 +14,7 @@ import * as schema from "~/server/db/schema";
 import { api } from "~/trpc/server";
 import { Player } from "./_components/HlsPlayer";
 import { Reactions } from "./_components/Reactions";
+import { VideoActionsMenu } from "./_components/VideoActionsMenu";
 import { VideoInfoCard } from "./_components/VideoInfoCard";
 import { FingerPrintViewCounter } from "./_components/ViewCounter";
 
@@ -86,6 +87,13 @@ export default async function VideoPage({
   if (session != null) {
     await api.videos.view({ videoId });
   }
+
+  const user = await db.query.user.findFirst({
+    where: eq(schema.user.id, session?.user?.id ?? ""),
+  });
+  const isUploader = session?.user?.id === video.uploadedById;
+  const isAdmin = user?.isAdmin ?? false;
+  const isUploaderOrAdmin = isUploader || isAdmin;
 
   const totalVideos =
     (
@@ -191,6 +199,7 @@ export default async function VideoPage({
                 <Button className="rounded-full" size="sm" variant="outline">
                   Report
                 </Button>
+                {isUploaderOrAdmin && <VideoActionsMenu videoId={video.id} />}
               </div>
             </section>
             <VideoInfoCard
