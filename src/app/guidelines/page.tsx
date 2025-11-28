@@ -249,6 +249,9 @@ export default function ContentGuidelinesPage() {
               <li>Are reasonably clear and watchable</li>
               <li>Have audible audio (if applicable)</li>
               <li>Are not excessively distorted or corrupted</li>
+              <li>
+                <strong>File size limit:</strong> Maximum 5GB per video file
+              </li>
             </ul>
 
             <h3 className="font-semibold text-xl">3.2 Metadata Accuracy</h3>

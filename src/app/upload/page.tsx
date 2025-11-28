@@ -28,6 +28,8 @@ type FormValues = {
   tagIds?: string[];
 };
 
+const MAX_VIDEO_SIZE = 5 * 1024 * 1024 * 1024; // 5GB in bytes
+
 export default function UploadPage() {
   const router = useRouter();
   const generateUrl = api.videos.generateUploadUrl.useMutation();
@@ -76,7 +78,19 @@ export default function UploadPage() {
     setVideoPreviewUrl("");
   }, [videoFile]);
 
-  const onDropVideo = useCallback((accepted: File[]) => {
+  const onDropVideo = useCallback((accepted: File[], rejected: unknown[]) => {
+    if (rejected.length > 0) {
+      const error = (rejected[0] as { errors?: { code: string }[] })
+        ?.errors?.[0];
+      if (error?.code === "file-too-large") {
+        toast.error(
+          `Video file must be ${MAX_VIDEO_SIZE / (1024 * 1024 * 1024)}GB or smaller`,
+        );
+      } else {
+        toast.error("Invalid video file");
+      }
+      return;
+    }
     setVideoFile(accepted?.[0] ?? null);
   }, []);
   const onDropThumb = useCallback((accepted: File[]) => {
@@ -92,6 +106,7 @@ export default function UploadPage() {
     accept: { "video/*": [] },
     maxFiles: 1,
     multiple: false,
+    maxSize: MAX_VIDEO_SIZE,
     onDrop: onDropVideo,
   });
   const {
@@ -110,6 +125,14 @@ export default function UploadPage() {
     try {
       if (!videoFile) {
         toast.error("Please select a video file to upload.");
+        return;
+      }
+
+      // Check file size limit
+      if (videoFile.size > MAX_VIDEO_SIZE) {
+        toast.error(
+          `Video file must be ${MAX_VIDEO_SIZE / (1024 * 1024 * 1024)}GB or smaller`,
+        );
         return;
       }
 
@@ -343,7 +366,12 @@ export default function UploadPage() {
                   {videoFile && (
                     <p className="text-muted-foreground text-xs">
                       Selected: {videoFile.name} (
-                      {Math.round(videoFile.size / 1024)} KB)
+                      {videoFile.size >= 1024 * 1024 * 1024
+                        ? `${(videoFile.size / (1024 * 1024 * 1024)).toFixed(2)} GB`
+                        : videoFile.size >= 1024 * 1024
+                          ? `${(videoFile.size / (1024 * 1024)).toFixed(2)} MB`
+                          : `${Math.round(videoFile.size / 1024)} KB`}
+                      )
                     </p>
                   )}
                   {videoRejections?.length > 0 && (
@@ -353,6 +381,9 @@ export default function UploadPage() {
                   )}
                 </div>
               </div>
+              <p className="text-muted-foreground text-xs">
+                Maximum file size: {MAX_VIDEO_SIZE / (1024 * 1024 * 1024)}GB
+              </p>
             </div>
             <div className="space-y-2">
               <Label>Thumbnail (optional)</Label>
