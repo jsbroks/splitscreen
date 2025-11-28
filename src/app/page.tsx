@@ -156,6 +156,7 @@ export default async function Home() {
                 thumbnail25pctUrl={video.transcode?.thumbnail25pct}
                 {...video}
                 status={video.status}
+                thumbnailUrl={video.thumbnailUrl}
               />
             ))}
           </div>

@@ -296,6 +296,7 @@ func processJob(
 		} else {
 			log.Info("HLS transcode complete", "id", j.ID)
 		}
+		s.SyncDirectory(ctx, outputPath, cfg.S3Bucket, j.OutputPrefix)
 		results <- taskResult{"HLS transcode", err}
 	}()
 
@@ -313,6 +314,7 @@ func processJob(
 		} else {
 			log.Info("hover preview complete", "id", j.ID)
 		}
+		s.SyncDirectory(ctx, outputPath, cfg.S3Bucket, j.OutputPrefix)
 		results <- taskResult{"hover preview", err}
 	}()
 
@@ -332,6 +334,7 @@ func processJob(
 		} else {
 			log.Info("thumbnails and VTT complete", "id", j.ID)
 		}
+		s.SyncDirectory(ctx, outputPath, cfg.S3Bucket, j.OutputPrefix)
 		results <- taskResult{"thumbnails and VTT", err}
 	}()
 
@@ -353,6 +356,7 @@ func processJob(
 		} else {
 			log.Info("25pct thumbnail complete", "id", j.ID, "path", thumbPath)
 		}
+		s.SyncDirectory(ctx, outputPath, cfg.S3Bucket, j.OutputPrefix)
 		results <- taskResult{"25pct thumbnail", err}
 	}()
 

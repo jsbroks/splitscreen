@@ -4,6 +4,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { VideoCard } from "~/app/_components/VideoCard";
+import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
 import { AspectRatio } from "~/components/ui/aspect-ratio";
 import { Avatar, AvatarFallback, AvatarImage } from "~/components/ui/avatar";
 import { Button } from "~/components/ui/button";
@@ -95,23 +96,49 @@ export default async function VideoPage({
         .then(takeFirst)
     )?.count ?? 0;
 
+  const posterUrl = video.thumbnailUrl ?? undefined;
+
+  const src =
+    video.transcode?.status === "done" && video.transcode?.hlsSource
+      ? video.transcode.hlsSource
+      : video.videoUrl;
+
   return (
     <main>
       {session == null && <FingerPrintViewCounter videoId={video.id} />}
       <div className="container mx-auto max-w-7xl space-y-3 px-6 py-12">
+        {(video.status === "processing" ||
+          video.transcode?.status !== "done") && (
+          <Alert variant="destructive">
+            <AlertTitle>
+              This video is processing. Loading may be slow until it is ready.
+            </AlertTitle>
+            <AlertDescription></AlertDescription>
+          </Alert>
+        )}
+
+        {video.status === "in_review" && (
+          <Alert>
+            <AlertTitle>This video is under review.</AlertTitle>
+            <AlertDescription>
+              Please wait for it to be approved by our team.
+            </AlertDescription>
+          </Alert>
+        )}
+
         <div className="flex gap-6">
           <div className="grow space-y-6">
             <AspectRatio ratio={16 / 9}>
-              {video.transcode?.hlsSource && (
+              {src && (
                 <Player
+                  posterUrl={posterUrl}
                   previewThumbnails={
                     video.transcode?.thumbnailsVtt ?? undefined
                   }
-                  src={video.transcode.hlsSource}
+                  src={src}
                 />
               )}
             </AspectRatio>
-
             <section className="flex items-center gap-4">
               <div className="flex items-center gap-2">
                 <Avatar className="size-9 shrink-0">
@@ -166,27 +193,13 @@ export default async function VideoPage({
                 </Button>
               </div>
             </section>
-
             <VideoInfoCard
               createdAt={video.createdAt}
               featuredCreators={video.featuredCreators}
               mainCreator={mainCreator ?? null}
+              tags={video.tags}
               views={video.views}
             />
-
-            {video.tags.length > 0 && (
-              <section className="space-y-2">
-                <p className="text-muted-foreground">Tags</p>
-
-                <div className="flex flex-wrap gap-2">
-                  {video.tags.map((tag) => (
-                    <Button key={tag.id} variant="secondary">
-                      {tag.tag.name}
-                    </Button>
-                  ))}
-                </div>
-              </section>
-            )}
           </div>
 
           <div className="hidden w-[300px] shrink-0 lg:block">

@@ -38,12 +38,13 @@ export default function HlsPlyr({
         "fullscreen",
       ],
       settings: ["quality", "speed"],
-      previewThumbnails: previewThumbnails
-        ? {
-            enabled: true,
-            src: previewThumbnails,
-          }
-        : undefined,
+      previewThumbnails:
+        previewThumbnails != null && previewThumbnails.length > 0
+          ? {
+              enabled: true,
+              src: previewThumbnails,
+            }
+          : undefined,
     };
 
     const video = videoRef.current;

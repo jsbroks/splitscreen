@@ -41,6 +41,7 @@ export const video = pgTable("video", {
   title: text("title").notNull(),
   description: text("description"),
   originalKey: text("original_key").notNull(), // e.g. originals/<videoId>/upload.mp4
+  originalThumbnailKey: text("original_thumbnail_key"), // e.g. originals/<videoId>/thumbnail.jpg
 
   status: videoStatusEnum("status").notNull().default("uploaded"),
 

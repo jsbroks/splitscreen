@@ -1,7 +1,9 @@
 import Link from "next/link";
 import { Avatar, AvatarFallback, AvatarImage } from "~/components/ui/avatar";
+import { cn } from "~/lib/utils";
 
 type CreatorLinkProps = {
+  className?: string;
   creator: {
     username: string;
     displayName: string;
@@ -9,10 +11,13 @@ type CreatorLinkProps = {
   };
 };
 
-export function CreatorLink({ creator }: CreatorLinkProps) {
+export function CreatorLink({ creator, className }: CreatorLinkProps) {
   return (
     <Link
-      className="inline-flex items-center gap-2 rounded-md bg-secondary px-2 py-1 text-sm hover:bg-secondary/80"
+      className={cn(
+        "inline-flex items-center gap-2 rounded-md bg-secondary px-2 py-1 text-xs hover:bg-secondary/80",
+        className,
+      )}
       href={`/creator/${creator.username}`}
     >
       {creator.image && (

@@ -34,6 +34,8 @@ export const env = createEnv({
     TYPESENSE_HOST: z.string().optional(),
     TYPESENSE_PORT: z.string().optional(),
     TYPESENSE_PROTOCOL: z.enum(["http", "https"]).optional(),
+
+    INTERNAL_API_KEY: z.string().default("secret"),
   },
 
   /**
@@ -66,6 +68,8 @@ export const env = createEnv({
     TYPESENSE_HOST: process.env.TYPESENSE_HOST,
     TYPESENSE_PORT: process.env.TYPESENSE_PORT,
     TYPESENSE_PROTOCOL: process.env.TYPESENSE_PROTOCOL,
+
+    INTERNAL_API_KEY: process.env.INTERNAL_API_KEY,
 
     NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL,
   },

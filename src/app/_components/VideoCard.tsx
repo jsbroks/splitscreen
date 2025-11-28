@@ -28,6 +28,7 @@ export const VideoCard: React.FC<VideoCardProps> = ({
   views,
   previewVideoUrl,
   thumbnail25pctUrl,
+  thumbnailUrl,
 }) => {
   const [isHovering, setIsHovering] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -72,7 +73,7 @@ export const VideoCard: React.FC<VideoCardProps> = ({
           className="rounded-sm object-contain transition-opacity duration-200"
           fill
           sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-          src={thumbnail25pctUrl ?? ""}
+          src={thumbnailUrl ?? thumbnail25pctUrl ?? ""}
           style={{ opacity: isHovering && previewVideoUrl ? 0 : 1 }}
         />
 

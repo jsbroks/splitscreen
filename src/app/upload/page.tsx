@@ -169,22 +169,40 @@ export default function UploadPage() {
         description: values.description,
         filename: videoFile.name,
         contentType: videoFile.type || "application/octet-stream",
+        thumbnailFilename: thumbFile?.name,
+        thumbnailContentType: thumbFile?.type || "image/jpeg",
         creatorId: finalCreatorId || undefined,
         featuredCreatorIds:
           finalFeaturedIds.length > 0 ? finalFeaturedIds : undefined,
         tags: selectedTags.length > 0 ? selectedTags : undefined,
       });
 
-      // Upload directly to S3
-      const put = await fetch(sign.uploadUrl, {
+      // Upload video to S3
+      const videoPut = await fetch(sign.uploadUrl, {
         method: "PUT",
         headers: {
           "Content-Type": videoFile.type || "application/octet-stream",
         },
         body: videoFile,
       });
-      if (!put.ok) {
-        throw new Error(`Upload failed with ${put.status}`);
+      if (!videoPut.ok) {
+        throw new Error(`Video upload failed with ${videoPut.status}`);
+      }
+
+      // Upload thumbnail to S3 if provided
+      if (thumbFile && sign.thumbnailUploadUrl) {
+        const thumbPut = await fetch(sign.thumbnailUploadUrl, {
+          method: "PUT",
+          headers: {
+            "Content-Type": thumbFile.type || "image/jpeg",
+          },
+          body: thumbFile,
+        });
+        if (!thumbPut.ok) {
+          console.error(`Thumbnail upload failed with ${thumbPut.status}`);
+          // Don't fail the entire upload if thumbnail fails
+          toast.warning("Video uploaded but thumbnail upload failed");
+        }
       }
 
       toast.success("Upload successful. Processing has started.");
@@ -293,8 +311,6 @@ export default function UploadPage() {
                 tags={tags ?? []}
                 values={selectedTags}
               />
-
-              {JSON.stringify(selectedTags)}
               <p className="text-muted-foreground text-xs">
                 Tags for categorizing this video. Type tag names and press Enter
                 to create new ones.

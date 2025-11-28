@@ -180,6 +180,8 @@ export const videosRouter = createTRPCRouter({
         description: z.string().optional(),
         filename: z.string().min(1),
         contentType: z.string().optional(),
+        thumbnailFilename: z.string().optional(),
+        thumbnailContentType: z.string().optional(),
         creatorId: z.string().optional(),
         featuredCreatorIds: z.array(z.string()).optional(),
         tags: z.array(z.string()).optional(),
@@ -218,12 +220,29 @@ export const videosRouter = createTRPCRouter({
       const uploadUrl = await getSignedUrl(client, command, {
         expiresIn: 60 * 30, // 30 mins
       });
+
+      // Generate thumbnail upload URL if thumbnail is provided
+      let thumbnailUploadUrl: string | undefined;
+      let thumbnailKey: string | undefined;
+      if (input.thumbnailFilename) {
+        const thumbFilename = path.basename(input.thumbnailFilename);
+        thumbnailKey = `originals/${videoId}/${thumbFilename}`;
+        const thumbCommand = new PutObjectCommand({
+          Bucket: env.S3_BUCKET,
+          Key: thumbnailKey,
+          ContentType: input.thumbnailContentType ?? "image/jpeg",
+        });
+        thumbnailUploadUrl = await getSignedUrl(client, thumbCommand, {
+          expiresIn: 60 * 30, // 30 mins
+        });
+      }
       await db.insert(schema.video).values({
         id: videoId,
         uploadedById: ctx.session.user.id,
         title: input.title.trim(),
         description: input.description ?? null,
         originalKey: key,
+        originalThumbnailKey: thumbnailKey ?? null,
         creatorId: input.creatorId ?? null,
         status: "uploaded",
       });
@@ -289,7 +308,14 @@ export const videosRouter = createTRPCRouter({
         status: "queued",
       });
 
-      return { videoId, key, uploadUrl, bucket: env.S3_BUCKET };
+      return {
+        videoId,
+        key,
+        uploadUrl,
+        bucket: env.S3_BUCKET,
+        thumbnailUploadUrl,
+        thumbnailKey,
+      };
     }),
 
   getVideo: publicProcedure
@@ -345,8 +371,18 @@ export const videosRouter = createTRPCRouter({
         ? `${env.S3_ENDPOINT}/${env.S3_BUCKET}/${transcode.outputPrefix}/thumbnails.vtt`
         : null;
 
+      const thumbnailUrl = video.originalThumbnailKey
+        ? `${env.S3_ENDPOINT}/${env.S3_BUCKET}/${video.originalThumbnailKey}`
+        : null;
+
+      const videoUrl = video.originalKey
+        ? `${env.S3_ENDPOINT}/${env.S3_BUCKET}/${video.originalKey}`
+        : null;
+
       return {
         ...video,
+        thumbnailUrl,
+        videoUrl,
         transcode: {
           ...(transcode ?? {}),
           hlsSource,
@@ -426,11 +462,14 @@ export const videosRouter = createTRPCRouter({
           ? `${env.S3_ENDPOINT}/${env.S3_BUCKET}/${transcode.outputPrefix}/thumb_25pct.jpg`
           : null;
 
-        console.log(thumbnail25pct);
+        const thumbnailUrl = v.originalThumbnailKey
+          ? `${env.S3_ENDPOINT}/${env.S3_BUCKET}/${v.originalThumbnailKey}`
+          : null;
 
         return {
           ...v,
           views: viewsCount,
+          thumbnailUrl,
           transcode: {
             ...v.transcodeQueue[0],
             thumbnailsVtt,
