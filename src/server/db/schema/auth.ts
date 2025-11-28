@@ -77,10 +77,43 @@ export const verification = pgTable(
   (table) => [index("verification_identifier_idx").on(table.identifier)],
 );
 
+export const userFollow = pgTable(
+  "user_follow",
+  {
+    id: text("id").primaryKey(),
+    followerId: text("follower_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    followingId: text("following_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => [
+    index("user_follow_follower_idx").on(table.followerId),
+    index("user_follow_following_idx").on(table.followingId),
+  ],
+);
+
 export const userRelations = relations(user, ({ many }) => ({
   sessions: many(session),
   accounts: many(account),
   uploadedVideos: many(video),
+  following: many(userFollow, { relationName: "follower" }),
+  followers: many(userFollow, { relationName: "following" }),
+}));
+
+export const userFollowRelations = relations(userFollow, ({ one }) => ({
+  follower: one(user, {
+    fields: [userFollow.followerId],
+    references: [user.id],
+    relationName: "follower",
+  }),
+  following: one(user, {
+    fields: [userFollow.followingId],
+    references: [user.id],
+    relationName: "following",
+  }),
 }));
 
 export const sessionRelations = relations(session, ({ one }) => ({

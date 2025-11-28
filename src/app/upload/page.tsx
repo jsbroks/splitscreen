@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useDropzone } from "react-dropzone";
@@ -255,7 +256,16 @@ export default function UploadPage() {
 
   return (
     <div className="mx-auto max-w-7xl p-10">
-      <h1 className="mb-6 font-semibold text-3xl">Upload a video</h1>
+      <div className="mb-6">
+        <h1 className="font-semibold text-3xl">Upload a video</h1>
+        <p className="mt-2 text-muted-foreground text-sm">
+          Please ensure your content complies with our{" "}
+          <Link className="text-primary hover:underline" href="/guidelines">
+            Content Guidelines
+          </Link>
+          . All uploads are reviewed before publication.
+        </p>
+      </div>
       <div className="flex gap-8">
         <div className="max-w-2xl flex-1">
           <form className="space-y-4" onSubmit={handleSubmit(onSubmit)}>

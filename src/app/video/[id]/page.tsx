@@ -1,9 +1,9 @@
 import { formatDistanceToNow } from "date-fns";
-import { UserPlus } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { VideoCard } from "~/app/_components/VideoCard";
+import { FollowButton } from "~/components/FollowButton";
 import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
 import { AspectRatio } from "~/components/ui/aspect-ratio";
 import { Avatar, AvatarFallback, AvatarImage } from "~/components/ui/avatar";
@@ -105,6 +105,10 @@ export default async function VideoPage({
         .then(takeFirst)
     )?.count ?? 0;
 
+  const followStats = await api.users.getFollowStats({
+    userId: video.uploadedById,
+  });
+
   const posterUrl = video.thumbnailUrl ?? undefined;
 
   const src =
@@ -184,19 +188,21 @@ export default async function VideoPage({
                     {new Intl.NumberFormat("en", {
                       notation: "compact",
                     }).format(totalVideos ?? 0)}{" "}
-                    video{totalVideos > 1 ? "s" : ""} | 389K Subscribers
+                    video{totalVideos > 1 ? "s" : ""} |{" "}
+                    {new Intl.NumberFormat("en", {
+                      notation: "compact",
+                    }).format(followStats.followers)}{" "}
+                    follower{followStats.followers !== 1 ? "s" : ""}
                   </p>
                 </Link>
               </div>
 
-              <Button
-                className="shrink-0 rounded-full"
-                size="lg"
-                variant="outline"
-              >
-                <UserPlus className="size-4" />
-                Follow
-              </Button>
+              {!isUploader && (
+                <FollowButton
+                  className="shrink-0 rounded-full"
+                  userId={video.uploadedById}
+                />
+              )}
 
               <div className="grow" />
 

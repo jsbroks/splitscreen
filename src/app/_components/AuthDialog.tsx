@@ -1,10 +1,12 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
 
 import { Button } from "~/components/ui/button";
+import { Checkbox } from "~/components/ui/checkbox";
 import {
   Dialog,
   DialogContent,
@@ -33,6 +35,8 @@ export function AuthDialog({ mode = "signin", trigger }: AuthDialogProps) {
     email: "",
     password: "",
     username: "",
+    acceptTerms: false,
+    confirmAge: false,
   });
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -60,7 +64,18 @@ export function AuthDialog({ mode = "signin", trigger }: AuthDialogProps) {
           router.refresh();
         }
       } else {
-        // Sign up
+        // Sign up - validate terms and age
+        if (!formData.acceptTerms) {
+          toast.error("You must accept the Terms of Service to sign up");
+          setIsLoading(false);
+          return;
+        }
+        if (!formData.confirmAge) {
+          toast.error("You must be at least 18 years old to use this service");
+          setIsLoading(false);
+          return;
+        }
+
         const result = await authClient.signUp.email({
           name: formData.username,
           email: formData.email,
@@ -85,7 +100,13 @@ export function AuthDialog({ mode = "signin", trigger }: AuthDialogProps) {
   };
 
   const resetForm = () => {
-    setFormData({ email: "", password: "", username: "" });
+    setFormData({
+      email: "",
+      password: "",
+      username: "",
+      acceptTerms: false,
+      confirmAge: false,
+    });
   };
 
   return (
@@ -150,6 +171,63 @@ export function AuthDialog({ mode = "signin", trigger }: AuthDialogProps) {
                 value={formData.password}
               />
             </div>
+            {!isLogin && (
+              <>
+                <div className="flex items-start gap-2">
+                  <Checkbox
+                    checked={formData.confirmAge}
+                    disabled={isLoading}
+                    id="confirmAge"
+                    onCheckedChange={(checked) =>
+                      setFormData((prev) => ({
+                        ...prev,
+                        confirmAge: checked === true,
+                      }))
+                    }
+                  />
+                  <label
+                    className="text-sm leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                    htmlFor="confirmAge"
+                  >
+                    I confirm that I am at least 18 years old
+                  </label>
+                </div>
+                <div className="flex items-start gap-2">
+                  <Checkbox
+                    checked={formData.acceptTerms}
+                    disabled={isLoading}
+                    id="acceptTerms"
+                    onCheckedChange={(checked) =>
+                      setFormData((prev) => ({
+                        ...prev,
+                        acceptTerms: checked === true,
+                      }))
+                    }
+                  />
+                  <label
+                    className="text-sm leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                    htmlFor="acceptTerms"
+                  >
+                    I agree to the{" "}
+                    <Link
+                      className="text-primary hover:underline"
+                      href="/terms"
+                      target="_blank"
+                    >
+                      Terms of Service
+                    </Link>{" "}
+                    and{" "}
+                    <Link
+                      className="text-primary hover:underline"
+                      href="/privacy"
+                      target="_blank"
+                    >
+                      Privacy Policy
+                    </Link>
+                  </label>
+                </div>
+              </>
+            )}
           </div>
           <DialogFooter className="flex-col gap-3 sm:flex-col">
             <Button className="w-full" disabled={isLoading} type="submit">

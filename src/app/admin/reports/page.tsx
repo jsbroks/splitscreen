@@ -118,6 +118,7 @@ export default function ReportsAdminPage() {
         )}
 
         {!isLoading && reports && (
+          // biome-ignore lint/complexity/noUselessFragments: readability
           <>
             {reports.length === 0 ? (
               <Card>
@@ -154,7 +155,7 @@ export default function ReportsAdminPage() {
                   </thead>
                   <tbody>
                     {reports.map((report) => (
-                      <tr key={report.id} className="border-b last:border-0">
+                      <tr className="border-b last:border-0" key={report.id}>
                         <td className="px-4 py-3">
                           <div className="max-w-xs">
                             <div className="font-medium">
@@ -190,7 +191,7 @@ export default function ReportsAdminPage() {
                           </div>
                         </td>
                         <td className="px-4 py-3">
-                          <div className="max-w-sm line-clamp-3 text-sm">
+                          <div className="line-clamp-3 max-w-sm text-sm">
                             {report.details}
                           </div>
                         </td>
@@ -253,7 +254,7 @@ export default function ReportsAdminPage() {
         )}
       </div>
 
-      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+      <Dialog onOpenChange={setDeleteDialogOpen} open={deleteDialogOpen}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Delete Video</DialogTitle>
@@ -264,20 +265,20 @@ export default function ReportsAdminPage() {
           </DialogHeader>
           <DialogFooter>
             <Button
-              variant="outline"
+              disabled={deleteVideo.isPending}
               onClick={() => {
                 setDeleteDialogOpen(false);
                 setDeletingVideoId(null);
                 setDeletingVideoTitle("");
               }}
-              disabled={deleteVideo.isPending}
+              variant="outline"
             >
               Cancel
             </Button>
             <Button
-              variant="destructive"
-              onClick={handleDeleteConfirm}
               disabled={deleteVideo.isPending}
+              onClick={handleDeleteConfirm}
+              variant="destructive"
             >
               {deleteVideo.isPending ? <Spinner /> : "Delete Video"}
             </Button>
@@ -287,4 +288,3 @@ export default function ReportsAdminPage() {
     </main>
   );
 }
-

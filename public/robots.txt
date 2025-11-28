@@ -1,10 +1,16 @@
-# *
+# Allow all crawlers
 User-agent: *
 Allow: /
 
-# Disallow admin pages
+# Disallow private pages
 Disallow: /admin/
+Disallow: /api/
 
-# Sitemap
-Sitemap: https://splitscreen.com/sitemap.xml
+# Allow important pages
+Allow: /terms
+Allow: /privacy
+Allow: /cookies
+Allow: /dmca
+Allow: /guidelines
+
 

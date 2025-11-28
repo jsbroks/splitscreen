@@ -5,6 +5,8 @@ import { Geist } from "next/font/google";
 import { Toaster } from "~/components/ui/sonner";
 import { getSession } from "~/server/better-auth/server";
 import { TRPCReactProvider } from "~/trpc/react";
+import { AgeVerification } from "./_components/AgeVerification";
+import { Footer } from "./_components/Footer";
 import { Navbar } from "./_components/Navbar";
 
 export const metadata: Metadata = {
@@ -25,10 +27,12 @@ export default async function RootLayout({
 
   return (
     <html className={`${geist.variable} dark dark:bg-black`} lang="en">
-      <body>
+      <body className="flex min-h-screen flex-col">
         <TRPCReactProvider>
           <Navbar user={session?.user} />
-          {children}
+          <div className="flex-1">{children}</div>
+          <Footer />
+          <AgeVerification />
           <Toaster />
         </TRPCReactProvider>
       </body>
