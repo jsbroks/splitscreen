@@ -57,8 +57,8 @@ services:
   transcoder:
     image: transcoder
     build:
-      context: .
-      dockerfile: transcoder/Dockerfile
+      context: ./transcoder
+      dockerfile: Dockerfile
     deploy:
       resources:
         limits:
