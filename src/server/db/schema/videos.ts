@@ -1,6 +1,7 @@
 import { relations, sql } from "drizzle-orm";
 import {
   bigint,
+  boolean,
   check,
   integer,
   pgEnum,
@@ -229,5 +230,43 @@ export const videoCategoryRelations = relations(videoCategory, ({ one }) => ({
   category: one(category, {
     fields: [videoCategory.categoryId],
     references: [category.id],
+  }),
+}));
+
+export const reportReasonEnum = pgEnum("report_reason", [
+  "underage_content",
+  "abuse",
+  "illegal_content",
+  "wrong_tags",
+  "spam_unrelated",
+  "dmca",
+  "other",
+]);
+
+export const videoReport = pgTable("video_report", {
+  id: text("id").primaryKey(),
+  videoId: text("video_id")
+    .notNull()
+    .references(() => video.id, { onDelete: "cascade" }),
+  reportedById: text("reported_by_id").references(() => user.id, {
+    onDelete: "set null",
+  }),
+  fingerprintId: text("fingerprint_id"),
+  reasons: reportReasonEnum("reasons").array().notNull(),
+  details: text("details").notNull(),
+  fullName: text("full_name").notNull(),
+  email: text("email").notNull(),
+  archived: boolean("archived").default(false).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const videoReportRelations = relations(videoReport, ({ one }) => ({
+  video: one(video, {
+    fields: [videoReport.videoId],
+    references: [video.id],
+  }),
+  reportedBy: one(user, {
+    fields: [videoReport.reportedById],
+    references: [user.id],
   }),
 }));

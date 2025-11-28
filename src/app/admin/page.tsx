@@ -32,9 +32,21 @@ export default async function AdminPage() {
           <Card>
             <CardHeader>
               <CardTitle>Videos</CardTitle>
-              <CardDescription>Review and approve pending videos</CardDescription>
+              <CardDescription>
+                Review and approve pending videos
+              </CardDescription>
               <Button asChild className="mt-4">
                 <Link href="/admin/videos">Review Videos</Link>
+              </Button>
+            </CardHeader>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Reports</CardTitle>
+              <CardDescription>Review and manage video reports</CardDescription>
+              <Button asChild className="mt-4">
+                <Link href="/admin/reports">View Reports</Link>
               </Button>
             </CardHeader>
           </Card>

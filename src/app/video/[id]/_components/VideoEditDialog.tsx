@@ -161,7 +161,7 @@ export function VideoEditDialog({
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog onOpenChange={onOpenChange} open={open}>
       <DialogContent className="max-w-2xl">
         <DialogHeader>
           <DialogTitle>Edit Video</DialogTitle>

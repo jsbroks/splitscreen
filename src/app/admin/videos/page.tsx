@@ -28,13 +28,11 @@ export default function VideosAdminPage() {
   const [rejectingVideoId, setRejectingVideoId] = useState<string | null>(null);
   const [rejectionMessage, setRejectionMessage] = useState("");
 
-  const statusFilter =
-    selectedStatus === "all_pending"
-      ? ["uploaded", "processing", "in_review", "failed"]
-      : ["in_review"];
-
   const { data: videos, isLoading } = api.videos.videos.useQuery({
-    status: statusFilter,
+    status:
+      selectedStatus === "all_pending"
+        ? ["uploaded", "processing", "in_review", "failed"]
+        : ["in_review"],
     limit: 100,
     orderBy: "oldest",
   });
@@ -135,13 +133,8 @@ export default function VideosAdminPage() {
           </Button>
         </div>
 
-        {isLoading && (
-          <div className="flex items-center justify-center py-12">
-            <Spinner size="lg" />
-          </div>
-        )}
-
         {!isLoading && videos && (
+          // biome-ignore lint/complexity/noUselessFragments: readability
           <>
             {videos.length === 0 ? (
               <Card>
@@ -182,7 +175,7 @@ export default function VideosAdminPage() {
                   </thead>
                   <tbody>
                     {videos.map((video) => (
-                      <tr key={video.id} className="border-b last:border-0">
+                      <tr className="border-b last:border-0" key={video.id}>
                         <td className="px-4 py-3">
                           {video.thumbnailUrl ? (
                             <div className="relative h-16 w-28 overflow-hidden rounded">
@@ -241,7 +234,7 @@ export default function VideosAdminPage() {
                                   variant="default"
                                 >
                                   {approveVideo.isPending ? (
-                                    <Spinner size="sm" />
+                                    <Spinner />
                                   ) : (
                                     "Approve"
                                   )}
@@ -267,7 +260,7 @@ export default function VideosAdminPage() {
         )}
       </div>
 
-      <Dialog open={rejectDialogOpen} onOpenChange={setRejectDialogOpen}>
+      <Dialog onOpenChange={setRejectDialogOpen} open={rejectDialogOpen}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Reject Video</DialogTitle>
@@ -278,30 +271,30 @@ export default function VideosAdminPage() {
           </DialogHeader>
           <div className="py-4">
             <Textarea
-              placeholder="Enter rejection reason (optional)..."
-              value={rejectionMessage}
               onChange={(e) => setRejectionMessage(e.target.value)}
+              placeholder="Enter rejection reason (optional)..."
               rows={4}
+              value={rejectionMessage}
             />
           </div>
           <DialogFooter>
             <Button
-              variant="outline"
+              disabled={rejectVideo.isPending}
               onClick={() => {
                 setRejectDialogOpen(false);
                 setRejectingVideoId(null);
                 setRejectionMessage("");
               }}
-              disabled={rejectVideo.isPending}
+              variant="outline"
             >
               Cancel
             </Button>
             <Button
-              variant="destructive"
-              onClick={handleRejectConfirm}
               disabled={rejectVideo.isPending}
+              onClick={handleRejectConfirm}
+              variant="destructive"
             >
-              {rejectVideo.isPending ? <Spinner size="sm" /> : "Reject Video"}
+              {rejectVideo.isPending ? <Spinner /> : "Reject Video"}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -309,4 +302,3 @@ export default function VideosAdminPage() {
     </main>
   );
 }
-

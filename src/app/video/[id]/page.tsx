@@ -14,6 +14,7 @@ import * as schema from "~/server/db/schema";
 import { api } from "~/trpc/server";
 import { Player } from "./_components/HlsPlayer";
 import { Reactions } from "./_components/Reactions";
+import { ReportDialog } from "./_components/ReportDialog";
 import { VideoActionsMenu } from "./_components/VideoActionsMenu";
 import { VideoInfoCard } from "./_components/VideoInfoCard";
 import { FingerPrintViewCounter } from "./_components/ViewCounter";
@@ -207,9 +208,7 @@ export default async function VideoPage({
                 <Button className="rounded-full" size="sm" variant="outline">
                   Share
                 </Button>
-                <Button className="rounded-full" size="sm" variant="outline">
-                  Report
-                </Button>
+                <ReportDialog videoId={video.id} />
                 {isUploaderOrAdmin && <VideoActionsMenu videoId={video.id} />}
               </div>
             </section>
