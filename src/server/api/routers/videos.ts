@@ -416,6 +416,7 @@ export const videosRouter = createTRPCRouter({
           ])
           .array()
           .optional(),
+        orderBy: z.enum(["newest", "oldest"]).optional().default("newest"),
       }),
     )
     .query(async ({ ctx, input }) => {
@@ -444,7 +445,11 @@ export const videosRouter = createTRPCRouter({
       }
 
       const videos = await ctx.db.query.video.findMany({
-        orderBy: [desc(schema.video.createdAt)],
+        orderBy: [
+          input.orderBy === "oldest"
+            ? asc(schema.video.createdAt)
+            : desc(schema.video.createdAt),
+        ],
         where,
         with: {
           transcodeQueue: {
@@ -502,6 +507,81 @@ export const videosRouter = createTRPCRouter({
       });
     }),
 
+  updateVideo: protectedProcedure
+    .input(
+      z.object({
+        videoId: z.string().min(1),
+        title: z.string().min(1).optional(),
+        description: z.string().optional(),
+        creatorId: z.string().optional(),
+        featuredCreatorIds: z.array(z.string()).optional(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      // Get the video to check ownership
+      const video = await ctx.db.query.video.findFirst({
+        where: eq(schema.video.id, input.videoId),
+      });
+
+      if (!video) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Video not found",
+        });
+      }
+
+      // Check if user is the uploader or an admin
+      const user = await ctx.db.query.user.findFirst({
+        where: eq(schema.user.id, ctx.session.user.id),
+      });
+
+      const isUploader = video.uploadedById === ctx.session.user.id;
+      const isAdmin = user?.isAdmin ?? false;
+
+      if (!isUploader && !isAdmin) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "You don't have permission to edit this video",
+        });
+      }
+
+      // Update video metadata
+      const updateData: Partial<typeof schema.video.$inferInsert> = {};
+      if (input.title !== undefined) updateData.title = input.title;
+      if (input.description !== undefined)
+        updateData.description = input.description;
+      if (input.creatorId !== undefined)
+        updateData.creatorId = input.creatorId || null;
+
+      if (Object.keys(updateData).length > 0) {
+        await ctx.db
+          .update(schema.video)
+          .set(updateData)
+          .where(eq(schema.video.id, input.videoId));
+      }
+
+      // Update featured creators if provided
+      if (input.featuredCreatorIds !== undefined) {
+        // Delete existing featured creators
+        await ctx.db
+          .delete(schema.videoFeaturedCreator)
+          .where(eq(schema.videoFeaturedCreator.videoId, input.videoId));
+
+        // Add new featured creators
+        if (input.featuredCreatorIds.length > 0) {
+          await ctx.db.insert(schema.videoFeaturedCreator).values(
+            input.featuredCreatorIds.map((creatorId) => ({
+              id: nanoid(),
+              videoId: input.videoId,
+              creatorId: creatorId,
+            })),
+          );
+        }
+      }
+
+      return { success: true };
+    }),
+
   deleteVideo: protectedProcedure
     .input(
       z.object({
@@ -540,6 +620,90 @@ export const videosRouter = createTRPCRouter({
       await ctx.db
         .update(schema.video)
         .set({ deletedAt: new Date() })
+        .where(eq(schema.video.id, input.videoId));
+
+      return { success: true };
+    }),
+
+  approveVideo: protectedProcedure
+    .input(
+      z.object({
+        videoId: z.string().min(1),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      // Check if user is an admin
+      const user = await ctx.db.query.user.findFirst({
+        where: eq(schema.user.id, ctx.session.user.id),
+      });
+
+      if (!user?.isAdmin) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "Only admins can approve videos",
+        });
+      }
+
+      // Get the video
+      const video = await ctx.db.query.video.findFirst({
+        where: eq(schema.video.id, input.videoId),
+      });
+
+      if (!video) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Video not found",
+        });
+      }
+
+      // Update video status to approved
+      await ctx.db
+        .update(schema.video)
+        .set({ status: "approved" })
+        .where(eq(schema.video.id, input.videoId));
+
+      return { success: true };
+    }),
+
+  rejectVideo: protectedProcedure
+    .input(
+      z.object({
+        videoId: z.string().min(1),
+        message: z.string().optional(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      // Check if user is an admin
+      const user = await ctx.db.query.user.findFirst({
+        where: eq(schema.user.id, ctx.session.user.id),
+      });
+
+      if (!user?.isAdmin) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "Only admins can reject videos",
+        });
+      }
+
+      // Get the video
+      const video = await ctx.db.query.video.findFirst({
+        where: eq(schema.video.id, input.videoId),
+      });
+
+      if (!video) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Video not found",
+        });
+      }
+
+      // Update video status to rejected with optional message
+      await ctx.db
+        .update(schema.video)
+        .set({
+          status: "rejected",
+          rejectionMessage: input.message ?? null,
+        })
         .where(eq(schema.video.id, input.videoId));
 
       return { success: true };

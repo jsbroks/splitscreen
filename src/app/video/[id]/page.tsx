@@ -129,7 +129,18 @@ export default async function VideoPage({
           <Alert>
             <AlertTitle>This video is under review.</AlertTitle>
             <AlertDescription>
-              Please wait for it to be approved by our team.
+              The video will not be visible to other users until it is approved.
+            </AlertDescription>
+          </Alert>
+        )}
+
+        {video.status === "rejected" && (
+          <Alert variant="destructive">
+            <AlertTitle>This video has been rejected.</AlertTitle>
+            <AlertDescription>
+              {video.rejectionMessage
+                ? video.rejectionMessage
+                : "This video does not meet our content guidelines."}
             </AlertDescription>
           </Alert>
         )}

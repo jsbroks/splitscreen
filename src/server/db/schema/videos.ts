@@ -44,6 +44,7 @@ export const video = pgTable("video", {
   originalThumbnailKey: text("original_thumbnail_key"), // e.g. originals/<videoId>/thumbnail.jpg
 
   status: videoStatusEnum("status").notNull().default("uploaded"),
+  rejectionMessage: text("rejection_message"), // message explaining why video was rejected
 
   // Optional metadata
   durationSeconds: integer("duration_seconds"), // set after probe/transcode

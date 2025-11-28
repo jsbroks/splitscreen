@@ -3,6 +3,7 @@
 import { MoreVertical, Pencil, Trash } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { toast } from "sonner";
 import { Button } from "~/components/ui/button";
 import {
   DropdownMenu,
@@ -11,7 +12,7 @@ import {
   DropdownMenuTrigger,
 } from "~/components/ui/dropdown-menu";
 import { api } from "~/trpc/react";
-import { toast } from "sonner";
+import { VideoEditDialog } from "./VideoEditDialog";
 
 interface VideoActionsMenuProps {
   videoId: string;
@@ -20,6 +21,9 @@ interface VideoActionsMenuProps {
 export function VideoActionsMenu({ videoId }: VideoActionsMenuProps) {
   const router = useRouter();
   const [isDeleting, setIsDeleting] = useState(false);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+
+  const { data: video } = api.videos.getVideo.useQuery({ videoId });
 
   const deleteVideoMutation = api.videos.deleteVideo.useMutation({
     onSuccess: () => {
@@ -44,27 +48,48 @@ export function VideoActionsMenu({ videoId }: VideoActionsMenuProps) {
     }
   };
 
+  const handleEdit = () => {
+    setEditDialogOpen(true);
+  };
+
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button className="rounded-full" size="sm" variant="outline">
-          <MoreVertical className="size-4" />
-        </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end">
-        <DropdownMenuItem>
-          <Pencil className="mr-2 size-4" />
-          Edit
-        </DropdownMenuItem>
-        <DropdownMenuItem
-          className="text-destructive"
-          disabled={isDeleting}
-          onClick={handleDelete}
-        >
-          <Trash className="mr-2 size-4" />
-          {isDeleting ? "Deleting..." : "Delete"}
-        </DropdownMenuItem>
-      </DropdownMenuContent>
-    </DropdownMenu>
+    <>
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button className="rounded-full" size="sm" variant="outline">
+            <MoreVertical className="size-4" />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end">
+          <DropdownMenuItem onClick={handleEdit}>
+            <Pencil className="mr-2 size-4" />
+            Edit
+          </DropdownMenuItem>
+          <DropdownMenuItem
+            className="text-destructive"
+            disabled={isDeleting}
+            onClick={handleDelete}
+          >
+            <Trash className="mr-2 size-4" />
+            {isDeleting ? "Deleting..." : "Delete"}
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+
+      {video && (
+        <VideoEditDialog
+          initialData={{
+            title: video.title,
+            description: video.description,
+            creatorId: video.creatorId,
+            featuredCreatorIds:
+              video.featuredCreators?.map((fc) => fc.creatorId) ?? [],
+          }}
+          onOpenChange={setEditDialogOpen}
+          open={editDialogOpen}
+          videoId={videoId}
+        />
+      )}
+    </>
   );
 }

@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { redirect } from "next/navigation";
 import { Button } from "~/components/ui/button";
 import {
   Card,
@@ -7,24 +6,8 @@ import {
   CardHeader,
   CardTitle,
 } from "~/components/ui/card";
-import { getSession } from "~/server/better-auth/server";
-import { db } from "~/server/db";
 
 export default async function AdminPage() {
-  const session = await getSession();
-
-  if (!session?.user) {
-    redirect("/");
-  }
-
-  const user = await db.query.user.findFirst({
-    where: (users, { eq }) => eq(users.id, session.user.id),
-  });
-
-  if (!user?.isAdmin) {
-    redirect("/");
-  }
-
   return (
     <main>
       <div className="container mx-auto max-w-7xl space-y-6 px-6 py-12">
@@ -42,6 +25,16 @@ export default async function AdminPage() {
               <CardDescription>Manage creators on the platform</CardDescription>
               <Button asChild className="mt-4">
                 <Link href="/admin/creators">Manage Creators</Link>
+              </Button>
+            </CardHeader>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Videos</CardTitle>
+              <CardDescription>Review and approve pending videos</CardDescription>
+              <Button asChild className="mt-4">
+                <Link href="/admin/videos">Review Videos</Link>
               </Button>
             </CardHeader>
           </Card>

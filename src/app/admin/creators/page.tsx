@@ -1,6 +1,5 @@
 import Image from "next/image";
 import Link from "next/link";
-import { redirect } from "next/navigation";
 import { Button } from "~/components/ui/button";
 import {
   Card,
@@ -9,24 +8,9 @@ import {
   CardHeader,
   CardTitle,
 } from "~/components/ui/card";
-import { getSession } from "~/server/better-auth/server";
 import { db } from "~/server/db";
 
 export default async function CreatorsAdminPage() {
-  const session = await getSession();
-
-  if (!session?.user) {
-    redirect("/");
-  }
-
-  const user = await db.query.user.findFirst({
-    where: (users, { eq }) => eq(users.id, session.user.id),
-  });
-
-  if (!user?.isAdmin) {
-    redirect("/");
-  }
-
   const creators = await db.query.creator.findMany({
     with: {
       links: true,
