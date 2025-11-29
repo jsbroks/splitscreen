@@ -22,7 +22,7 @@ export const metadata: Metadata = {
   description:
     "Explore a curated collection of captivating splitscreen videos.",
   icons: [
-    { rel: "icon", url: "/favicon.ico" },
+    { rel: "icon", url: "/logo.svg" },
     { rel: "apple-touch-icon", url: "/apple-touch-icon.png" },
   ],
 };

@@ -54,7 +54,7 @@ services:
       context: ./transcoder
       dockerfile: Dockerfile
     environment:
-      DATABASE_URL: postgres://postgres:postgres@db:5432/appdb
+      DATABASE_URL: postgres://postgres:postgres@db:5432/appdb?sslmode=disable
 
       S3_BUCKET: splithaven
       S3_ENDPOINT: https://25844977d6037335b3c892d222f54af2.r2.cloudflarestorage.com

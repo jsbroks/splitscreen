@@ -70,8 +70,8 @@ export const metadata: Metadata = {
     // bing: "your-bing-verification-code",
   },
   icons: {
-    icon: "/favicon.ico",
-    shortcut: "/favicon.ico",
+    icon: "/logo.svg",
+    shortcut: "/logo.svg",
     apple: "/apple-touch-icon.png",
   },
   manifest: "/site.webmanifest",

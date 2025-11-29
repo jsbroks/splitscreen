@@ -103,9 +103,8 @@ export default function PrivacyPolicyPage() {
               "Service").
             </p>
             <p>
-              <strong>Data Controller:</strong> For the purposes of GDPR,
-              Split Haven is the data controller responsible for your personal
-              data.
+              <strong>Data Controller:</strong> For the purposes of GDPR, Split
+              Haven is the data controller responsible for your personal data.
             </p>
             <p>
               <strong>Contact:</strong> For privacy-related inquiries, contact

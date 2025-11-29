@@ -97,8 +97,8 @@ export default function ContentGuidelinesPage() {
           <div className="space-y-4" id="prohibited">
             <h2 className="font-bold text-2xl">2. Prohibited Content</h2>
             <p>
-              The following types of content are strictly prohibited on
-              Split Haven:
+              The following types of content are strictly prohibited on Split
+              Haven:
             </p>
 
             <div className="space-y-6">
