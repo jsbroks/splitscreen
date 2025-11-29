@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { SearchContent } from "./search-content";
+import { SearchContent } from "./SearchContent";
 
 const SITE_NAME = "SplitScreen";
 const SITE_DESCRIPTION =

@@ -100,13 +100,13 @@ export const videoQueriesRouter = createTRPCRouter({
         .whereDurationBetween(duration?.min, duration?.max)
         .whereStatus(status)
         .searchFields([
-          "title",
-          "description",
-          "featured_creator_display_names",
-          "featured_creator_aliases",
-          "tag_names",
-          "creator_username",
-          "creator_display_name",
+          ["title", 2],
+          ["description", 1],
+          ["featured_creator_display_names", 1],
+          ["featured_creator_aliases", 1],
+          ["tag_names", 1],
+          ["creator_username", 1],
+          ["creator_display_name", 2],
         ])
         .executeAndMap();
 

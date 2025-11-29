@@ -71,7 +71,7 @@ interface TypesenseSearchParams {
 
 export class VideoQueryBuilder {
   private query: string = "*";
-  private queryByFields: SearchableField[] = ["title"];
+  private queryByFields: [SearchableField, number][] = [["title", 1]];
   private filters: string[] = [];
   private sortFields: Array<{
     field: SortableField;
@@ -96,7 +96,7 @@ export class VideoQueryBuilder {
    * Set fields to search in
    * @default ["title"]
    */
-  searchFields(fields: SearchableField[]): this {
+  searchFields(fields: [SearchableField, number][]): this {
     this.queryByFields = fields;
     return this;
   }
@@ -104,7 +104,7 @@ export class VideoQueryBuilder {
   /**
    * Add multiple fields to search (chainable)
    */
-  addSearchField(...fields: SearchableField[]): this {
+  addSearchField(...fields: [SearchableField, number][]): this {
     this.queryByFields.push(...fields);
     return this;
   }
@@ -495,7 +495,7 @@ export class VideoQueryBuilder {
    */
   reset(): this {
     this.query = "*";
-    this.queryByFields = ["title"];
+    this.queryByFields = [["title", 1]];
     this.filters = [];
     this.sortFields = [];
     this.perPage = 20;
@@ -527,9 +527,22 @@ export class VideoQueryBuilder {
    * Build and return the final query object
    */
   build(): TypesenseSearchParams {
+    const queryByFields = this.queryByFields.map((w) => w[0]).join(",");
+    const queryWeights = this.queryByFields.map((w) => w[1]).join(",");
+
     const params: TypesenseSearchParams = {
       q: this.query,
-      query_by: this.queryByFields.join(","),
+      query_by: queryByFields,
+      query_weights: queryWeights,
+
+      prefix: "true", // Enables prefix matching in queries (matches start of words, e.g., "cat" matches "catalog")
+      infix: "always", // Enables infix (substring) matching inside words (e.g., "tal" matches "catalog")
+      typo_tolerance: "true", // Allows matches with typos based on edit distance (fuzzy matching)
+      num_typos: 2, // Maximum number of allowed typos (edit distance = 2)
+      text_match_type: "max_edit_distance", // Use the text matching strategy that prioritizes max edit distance for typo tolerance
+      remove_words_if_no_results: "all", // If no results, remove all query words one by one and retry (broadens search results)
+      drop_tokens_threshold: 3, // When removing words, if the query falls below 3 tokens, stop removing more
+
       ...this.additionalParams,
     };
 

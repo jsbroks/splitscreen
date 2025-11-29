@@ -7,23 +7,31 @@ export const videosV1: CollectionCreateSchema = {
     { name: "id", type: "string" },
 
     // Searchable text fields
-    { name: "title", type: "string" },
-    { name: "description", type: "string", optional: true },
+    { name: "title", type: "string", infix: true },
+    { name: "description", type: "string", optional: true, infix: true },
 
     // Creator information (for filtering and grouping)
     { name: "creator_id", type: "string", optional: true, facet: true },
-    { name: "creator_username", type: "string", optional: true, facet: true },
+    {
+      name: "creator_username",
+      type: "string",
+      optional: true,
+      facet: true,
+      infix: true,
+    },
     {
       name: "creator_display_name",
       type: "string",
       optional: true,
       facet: true,
+      infix: true,
     },
     {
       name: "creator_aliases",
       type: "string[]",
       optional: true,
       facet: true,
+      infix: true,
     },
 
     // Featured creators (array for multiple creators per video)
@@ -38,29 +46,56 @@ export const videosV1: CollectionCreateSchema = {
       type: "string[]",
       optional: true,
       facet: true,
+      infix: true,
     },
     {
       name: "featured_creator_display_names",
       type: "string[]",
       optional: true,
       facet: true,
+      infix: true,
     },
     {
       name: "featured_creator_aliases",
       type: "string[]",
       optional: true,
       facet: true,
+      infix: true,
     },
 
     // Tags (for filtering and grouping)
     { name: "tag_ids", type: "string[]", optional: true, facet: true },
-    { name: "tag_names", type: "string[]", optional: true, facet: true },
-    { name: "tag_slugs", type: "string[]", optional: true, facet: true },
+    {
+      name: "tag_names",
+      type: "string[]",
+      optional: true,
+      facet: true,
+      infix: true,
+    },
+    {
+      name: "tag_slugs",
+      type: "string[]",
+      optional: true,
+      facet: true,
+      infix: true,
+    },
 
     // Categories (for filtering and grouping)
     { name: "category_ids", type: "string[]", optional: true, facet: true },
-    { name: "category_names", type: "string[]", optional: true, facet: true },
-    { name: "category_slugs", type: "string[]", optional: true, facet: true },
+    {
+      name: "category_names",
+      type: "string[]",
+      optional: true,
+      facet: true,
+      infix: true,
+    },
+    {
+      name: "category_slugs",
+      type: "string[]",
+      optional: true,
+      facet: true,
+      infix: true,
+    },
 
     // Uploader information (who uploaded the video)
     { name: "uploaded_by_id", type: "string", facet: true },

@@ -1,9 +1,8 @@
 "use client";
 
 import { Clock, SortAsc } from "lucide-react";
-import { useSearchParams } from "next/navigation";
+import { useQueryState } from "nuqs";
 import { useEffect, useRef, useState } from "react";
-
 import {
   Select,
   SelectContent,
@@ -14,7 +13,6 @@ import {
 import { Spinner } from "~/components/ui/spinner";
 import { api } from "~/trpc/react";
 import { VideoCard } from "../_components/VideoCard";
-import { useQueryState } from "nuqs";
 
 type SortOption =
   | "newest"
@@ -52,7 +50,7 @@ const getSortBy = (option: SortOption) => {
 const LIMIT = 24;
 
 export function SearchContent() {
-  const [searchQuery, setSearchQuery] = useQueryState("q");
+  const [searchQuery] = useQueryState("q");
 
   const [sortOption, setSortOption] = useState<SortOption>("relevance");
   const [minDuration, setMinDuration] = useState<number | undefined>(undefined);
