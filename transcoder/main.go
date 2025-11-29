@@ -190,12 +190,6 @@ func processJob(
 	start := time.Now()
 	log.Info("processing job", "id", j.ID, "video", j.VideoID, "input", j.InputKey)
 
-	// Set video status to processing
-	if err := db.SetVideoProcessing(ctx, sqlDB, j.VideoID); err != nil {
-		log.Error("failed to set video processing status", "id", j.ID, "video", j.VideoID, "error", err)
-		// Continue anyway, don't fail the job for this
-	}
-
 	inputPath := j.InputKey
 
 	// Wait for the input file to exist in S3 (upload might still be in progress)
@@ -259,10 +253,6 @@ func processJob(
 	sourceInfo, err := t.ProbeVideo(ctx, localInputPath)
 	if err != nil {
 		log.Error("probe error", "id", j.ID, "error", err)
-		// Mark video as failed
-		if statusErr := db.SetVideoFailed(ctx, sqlDB, j.VideoID); statusErr != nil {
-			log.Error("failed to set video failed status", "id", j.ID, "video", j.VideoID, "error", statusErr)
-		}
 		return fmt.Errorf("probe video: %w", err)
 	}
 	log.Info("source video info", "id", j.ID, "width", sourceInfo.Width, "height", sourceInfo.Height, "duration", sourceInfo.DurationSec)
@@ -383,9 +373,6 @@ func processJob(
 	// If any task failed, mark video as failed and return the first error
 	if len(taskErrors) > 0 {
 		log.Error("one or more transcoding tasks failed", "id", j.ID, "errors", len(taskErrors))
-		if statusErr := db.SetVideoFailed(ctx, sqlDB, j.VideoID); statusErr != nil {
-			log.Error("failed to set video failed status", "id", j.ID, "video", j.VideoID, "error", statusErr)
-		}
 		return taskErrors[0]
 	}
 
@@ -400,12 +387,6 @@ func processJob(
 	if err := queue.Complete(ctx, sqlDB, j.ID); err != nil {
 		log.Error("complete error for job", "id", j.ID, "error", err)
 		return fmt.Errorf("complete: %w", err)
-	}
-
-	// Mark video as in_review (ready for manual review/approval)
-	if err := db.SetVideoInReview(ctx, sqlDB, j.VideoID); err != nil {
-		log.Error("failed to set video in_review status", "id", j.ID, "video", j.VideoID, "error", err)
-		// Continue anyway - video is processed successfully
 	}
 
 	log.Info("job done", "id", j.ID, "video", j.VideoID, "status", "in_review", "duration", time.Since(start).Truncate(time.Millisecond))

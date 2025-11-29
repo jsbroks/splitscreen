@@ -11,12 +11,9 @@ import (
 type VideoStatus string
 
 const (
-	VideoStatusUploaded   VideoStatus = "uploaded"
-	VideoStatusProcessing VideoStatus = "processing"
 	VideoStatusInReview   VideoStatus = "in_review"
 	VideoStatusApproved   VideoStatus = "approved"
 	VideoStatusRejected   VideoStatus = "rejected"
-	VideoStatusFailed     VideoStatus = "failed"
 )
 
 // UpdateVideoStatus updates the status of a video by its ID.
@@ -42,26 +39,6 @@ func UpdateVideoStatus(ctx context.Context, db *sql.DB, videoID string, status V
 	}
 	
 	return nil
-}
-
-// SetVideoProcessing marks a video as being processed.
-func SetVideoProcessing(ctx context.Context, db *sql.DB, videoID string) error {
-	return UpdateVideoStatus(ctx, db, videoID, VideoStatusProcessing)
-}
-
-// SetVideoApproved marks a video as approved and ready for viewing.
-func SetVideoApproved(ctx context.Context, db *sql.DB, videoID string) error {
-	return UpdateVideoStatus(ctx, db, videoID, VideoStatusApproved)
-}
-
-// SetVideoFailed marks a video as failed processing.
-func SetVideoFailed(ctx context.Context, db *sql.DB, videoID string) error {
-	return UpdateVideoStatus(ctx, db, videoID, VideoStatusFailed)
-}
-
-// SetVideoInReview marks a video as ready for review.
-func SetVideoInReview(ctx context.Context, db *sql.DB, videoID string) error {
-	return UpdateVideoStatus(ctx, db, videoID, VideoStatusInReview)
 }
 
 // UpdateVideoMetadata updates the video's duration and size after processing.

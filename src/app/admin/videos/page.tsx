@@ -84,12 +84,9 @@ export default function VideosAdminPage() {
         label: string;
       }
     > = {
-      uploaded: { variant: "secondary", label: "Uploaded" },
-      processing: { variant: "default", label: "Processing" },
       in_review: { variant: "outline", label: "In Review" },
       approved: { variant: "default", label: "Approved" },
       rejected: { variant: "destructive", label: "Rejected" },
-      failed: { variant: "destructive", label: "Failed" },
     };
 
     const statusInfo = variants[status] ?? {

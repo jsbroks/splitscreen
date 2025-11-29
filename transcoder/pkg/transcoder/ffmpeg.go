@@ -333,7 +333,7 @@ func (t *FFmpegTranscoder) GenerateVTT(ctx context.Context, inputPath, spritePat
 
 func (t *FFmpegTranscoder) GenerateHoverPreview(ctx context.Context, inputPath, outWebM, outMP4 string, duration time.Duration, width int, fps int) error {
 	if duration <= 0 {
-		duration = 3 * time.Second
+		duration = 5 * time.Second
 	}
 	if fps <= 0 {
 		fps = 24
@@ -341,46 +341,116 @@ func (t *FFmpegTranscoder) GenerateHoverPreview(ctx context.Context, inputPath, 
 	if width <= 0 {
 		width = 480
 	}
+
+	// Probe video to get total duration
+	info, err := ff.Probe(ctx, t.ffprobePath, inputPath)
+	if err != nil {
+		return fmt.Errorf("probe: %w", err)
+	}
+
+	// Calculate timestamps at 25%, 50%, and 75% of video duration
+	clipDurationSec := duration.Seconds()
+	timestamps := []float64{
+		info.DurationSec * 0.25,
+		info.DurationSec * 0.50,
+		info.DurationSec * 0.75,
+	}
+
+	// Ensure clips don't exceed video duration
+	for i, ts := range timestamps {
+		if ts+clipDurationSec > info.DurationSec {
+			timestamps[i] = math.Max(0, info.DurationSec-clipDurationSec)
+		}
+	}
+
 	if outWebM != "" {
 		if err := os.MkdirAll(filepath.Dir(outWebM), 0o755); err != nil {
 			return fmt.Errorf("webm dir: %w", err)
 		}
-		fc := ff.NewFilterChain().Scale(width, -2).FPS(fps)
-		cmd := ff.New(t.ffmpegPath).
-			Overwrite(true).
-			Input(inputPath).
-			Duration(duration).
-			FilterChain(fc).
-			NoAudio().
-			VideoCodec("libvpx-vp9").
-			Arg("-b:v", "0").
-			CRF(32).
-			Arg("-row-mt", "1").
-			Output(outWebM)
-		if err := cmd.Run(ctx); err != nil {
-			return fmt.Errorf("ffmpeg webm: %w", err)
+		if err := t.generateHoverPreviewWebM(ctx, inputPath, outWebM, timestamps, clipDurationSec, width, fps); err != nil {
+			return err
 		}
 	}
+
 	if outMP4 != "" {
 		if err := os.MkdirAll(filepath.Dir(outMP4), 0o755); err != nil {
 			return fmt.Errorf("mp4 dir: %w", err)
 		}
-		fc := ff.NewFilterChain().Scale(width, -2).FPS(fps)
-		cmd := ff.New(t.ffmpegPath).
-			Overwrite(true).
-			Input(inputPath).
-			Duration(duration).
-			FilterChain(fc).
-			NoAudio().
-			VideoCodec("libx264").
-			Preset(t.x264Preset).
-			CRF(28).
-			Arg("-movflags", "+faststart").
-			Output(outMP4)
-		if err := cmd.Run(ctx); err != nil {
-			return fmt.Errorf("ffmpeg mp4: %w", err)
+		if err := t.generateHoverPreviewMP4(ctx, inputPath, outMP4, timestamps, clipDurationSec, width, fps); err != nil {
+			return err
 		}
 	}
+
+	return nil
+}
+
+func (t *FFmpegTranscoder) generateHoverPreviewWebM(ctx context.Context, inputPath, outPath string, timestamps []float64, clipDurationSec float64, width int, fps int) error {
+	// Build complex filter to extract and concatenate clips
+	// [0:v] split=3 [v0][v1][v2];
+	// [v0] trim=start=T1:duration=D, setpts=PTS-STARTPTS, scale=W:-2, fps=FPS [clip0];
+	// [v1] trim=start=T2:duration=D, setpts=PTS-STARTPTS, scale=W:-2, fps=FPS [clip1];
+	// [v2] trim=start=T3:duration=D, setpts=PTS-STARTPTS, scale=W:-2, fps=FPS [clip2];
+	// [clip0][clip1][clip2] concat=n=3:v=1:a=0 [out]
+
+	filterComplex := fmt.Sprintf(
+		"[0:v] split=3 [v0][v1][v2]; "+
+			"[v0] trim=start=%.3f:duration=%.3f, setpts=PTS-STARTPTS, scale=%d:-2, fps=%d [clip0]; "+
+			"[v1] trim=start=%.3f:duration=%.3f, setpts=PTS-STARTPTS, scale=%d:-2, fps=%d [clip1]; "+
+			"[v2] trim=start=%.3f:duration=%.3f, setpts=PTS-STARTPTS, scale=%d:-2, fps=%d [clip2]; "+
+			"[clip0][clip1][clip2] concat=n=3:v=1:a=0 [out]",
+		timestamps[0], clipDurationSec, width, fps,
+		timestamps[1], clipDurationSec, width, fps,
+		timestamps[2], clipDurationSec, width, fps,
+	)
+
+	cmd := ff.New(t.ffmpegPath).
+		Overwrite(true).
+		Input(inputPath).
+		Arg("-filter_complex", filterComplex).
+		Arg("-map", "[out]").
+		NoAudio().
+		VideoCodec("libvpx-vp9").
+		Arg("-b:v", "0").
+		CRF(32).
+		Arg("-row-mt", "1").
+		Output(outPath)
+
+	if err := cmd.Run(ctx); err != nil {
+		return fmt.Errorf("ffmpeg webm: %w", err)
+	}
+
+	return nil
+}
+
+func (t *FFmpegTranscoder) generateHoverPreviewMP4(ctx context.Context, inputPath, outPath string, timestamps []float64, clipDurationSec float64, width int, fps int) error {
+	// Build complex filter to extract and concatenate clips
+	filterComplex := fmt.Sprintf(
+		"[0:v] split=3 [v0][v1][v2]; "+
+			"[v0] trim=start=%.3f:duration=%.3f, setpts=PTS-STARTPTS, scale=%d:-2, fps=%d [clip0]; "+
+			"[v1] trim=start=%.3f:duration=%.3f, setpts=PTS-STARTPTS, scale=%d:-2, fps=%d [clip1]; "+
+			"[v2] trim=start=%.3f:duration=%.3f, setpts=PTS-STARTPTS, scale=%d:-2, fps=%d [clip2]; "+
+			"[clip0][clip1][clip2] concat=n=3:v=1:a=0 [out]",
+		timestamps[0], clipDurationSec, width, fps,
+		timestamps[1], clipDurationSec, width, fps,
+		timestamps[2], clipDurationSec, width, fps,
+	)
+
+	cmd := ff.New(t.ffmpegPath).
+		Overwrite(true).
+		Input(inputPath).
+		Arg("-filter_complex", filterComplex).
+		Arg("-map", "[out]").
+		NoAudio().
+		VideoCodec("libx264").
+		Preset(t.x264Preset).
+		CRF(28).
+		Arg("-movflags", "+faststart").
+		Output(outPath)
+
+	if err := cmd.Run(ctx); err != nil {
+		return fmt.Errorf("ffmpeg mp4: %w", err)
+	}
+
 	return nil
 }
 
