@@ -145,13 +145,28 @@ export function VideoEditDialog({
         }
       }
 
+      // Build creators array with roles
+      const creatorsWithRoles: {
+        id: string;
+        role: "performer" | "producer";
+      }[] = [];
+
+      // Add main creator as producer if selected
+      if (finalCreatorId) {
+        creatorsWithRoles.push({ id: finalCreatorId, role: "producer" });
+      }
+
+      // Add featured creators as performers
+      for (const creatorId of finalFeaturedIds) {
+        creatorsWithRoles.push({ id: creatorId, role: "performer" });
+      }
+
       // Update the video
       await updateVideoMutation.mutateAsync({
         videoId,
         title: values.title,
         description: values.description,
-        creatorId: finalCreatorId || undefined,
-        featuredCreatorIds: finalFeaturedIds,
+        creators: creatorsWithRoles.length > 0 ? creatorsWithRoles : undefined,
       });
     } catch (e) {
       console.error(e);

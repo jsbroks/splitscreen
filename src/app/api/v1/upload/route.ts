@@ -18,8 +18,14 @@ const videoUploadSchema = z.object({
   contentType: z.string().optional(),
   thumbnailFilename: z.string().optional(),
   thumbnailContentType: z.string().optional(),
-  creatorId: z.string().optional(),
-  featuredCreatorIds: z.array(z.string()).optional(),
+  creators: z
+    .array(
+      z.object({
+        id: z.string(),
+        role: z.enum(["performer", "producer"]),
+      }),
+    )
+    .optional(),
   tags: z.array(z.string()).optional(),
   createdAt: z.date().optional(),
 });
@@ -138,18 +144,17 @@ async function handleVideoUpload(
     description: input.description ?? null,
     originalKey: key,
     originalThumbnailKey: thumbnailKey ?? null,
-    creatorId: input.creatorId ?? null,
     createdAt: input.createdAt ?? new Date(),
     status: "approved",
   });
 
-  // Add featured creators if provided
-  if (input.featuredCreatorIds && input.featuredCreatorIds.length > 0) {
-    await db.insert(schema.videoFeaturedCreator).values(
-      input.featuredCreatorIds.map((creatorId) => ({
+  if (input.creators && input.creators.length > 0) {
+    await db.insert(schema.videoCreator).values(
+      input.creators.map((creator) => ({
         id: nanoid(),
         videoId: videoId,
-        creatorId: creatorId,
+        creatorId: creator.id,
+        role: creator.role,
       })),
     );
   }

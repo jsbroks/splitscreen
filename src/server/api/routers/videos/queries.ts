@@ -297,7 +297,7 @@ export const videoQueriesRouter = createTRPCRouter({
               tag: true,
             },
           },
-          featuredCreators: {
+          creators: {
             with: {
               creator: true,
             },

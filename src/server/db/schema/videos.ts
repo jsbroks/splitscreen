@@ -65,7 +65,7 @@ export const videoRelations = relations(video, ({ many, one }) => ({
     fields: [video.uploadedById],
     references: [user.id],
   }),
-  featuredCreators: many(videoFeaturedCreator),
+  creators: many(videoCreator),
   tags: many(videoTag),
   categories: many(videoCategory),
   views: many(videoView),
@@ -78,30 +78,37 @@ export const creatorRoleEnum = pgEnum("creator_role", [
   "producer",
 ]);
 
-export const videoFeaturedCreator = pgTable("video_creator", {
-  id: text("id").primaryKey(),
-  videoId: text("video_id")
-    .notNull()
-    .references(() => video.id, { onDelete: "cascade" }),
-  creatorId: text("creator_id")
-    .notNull()
-    .references(() => creator.id, { onDelete: "cascade" }),
-  role: creatorRoleEnum("role").notNull().default("performer"),
-});
-
-export const videoFeaturedCreatorRelations = relations(
-  videoFeaturedCreator,
-  ({ one }) => ({
-    video: one(video, {
-      fields: [videoFeaturedCreator.videoId],
-      references: [video.id],
-    }),
-    creator: one(creator, {
-      fields: [videoFeaturedCreator.creatorId],
-      references: [creator.id],
-    }),
-  }),
+export const videoCreator = pgTable(
+  "video_creator",
+  {
+    id: text("id").primaryKey(),
+    videoId: text("video_id")
+      .notNull()
+      .references(() => video.id, { onDelete: "cascade" }),
+    creatorId: text("creator_id")
+      .notNull()
+      .references(() => creator.id, { onDelete: "cascade" }),
+    role: creatorRoleEnum("role").notNull().default("performer"),
+  },
+  (t) => [
+    uniqueIndex("video_creator_video_id_creator_id_unique").on(
+      t.videoId,
+      t.creatorId,
+      t.role,
+    ),
+  ],
 );
+
+export const videoCreatorRelations = relations(videoCreator, ({ one }) => ({
+  video: one(video, {
+    fields: [videoCreator.videoId],
+    references: [video.id],
+  }),
+  creator: one(creator, {
+    fields: [videoCreator.creatorId],
+    references: [creator.id],
+  }),
+}));
 
 // Per-user/fingerprint view history for videos.
 // Either userId or fingerprintId must be set (or both for authenticated users with fingerprints).

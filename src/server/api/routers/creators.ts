@@ -1,7 +1,7 @@
 import { TRPCError } from "@trpc/server";
 import { nanoid } from "nanoid";
 import { z } from "zod";
-import { eq, or, isNull, inArray, asc } from "~/server/db";
+import { asc, eq, inArray, isNull, or } from "~/server/db";
 import * as schema from "~/server/db/schema";
 import { adminProcedure, createTRPCRouter, publicProcedure } from "../trpc";
 
@@ -81,13 +81,13 @@ export const creatorsRouter = createTRPCRouter({
           .selectDistinctOn([schema.creator.username])
           .from(schema.creator)
           .leftJoin(
-            schema.videoFeaturedCreator,
-            eq(schema.creator.id, schema.videoFeaturedCreator.creatorId),
+            schema.videoCreator,
+            eq(schema.creator.id, schema.videoCreator.creatorId),
           )
           .where(
             or(
-              eq(schema.videoFeaturedCreator.role, "performer"),
-              isNull(schema.videoFeaturedCreator.role),
+              eq(schema.videoCreator.role, "performer"),
+              isNull(schema.videoCreator.role),
             ),
           )
           .orderBy(asc(schema.creator.username))

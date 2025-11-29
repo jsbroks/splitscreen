@@ -31,7 +31,6 @@ export async function generateMetadata({
     .from(schema.video)
     .where(eq(schema.video.id, id))
     .innerJoin(schema.user, eq(schema.video.uploadedById, schema.user.id))
-    .leftJoin(schema.creator, eq(schema.video.creatorId, schema.creator.id))
     .then(takeFirstOrNull);
 
   if (!result) {
@@ -41,12 +40,8 @@ export async function generateMetadata({
     };
   }
 
-  const { video, user, creator } = result;
-  const author =
-    creator?.displayName ??
-    creator?.username ??
-    user.displayUsername ??
-    user.username;
+  const { video, user } = result;
+  const author = user.displayUsername ?? user.username;
   const title = `${video.title} by ${author} | Split Haven`;
   const description = `Watch ${video.title} created ${formatDistanceToNow(video.createdAt)} ago by ${author}.`;
 
@@ -74,13 +69,6 @@ export default async function VideoPage({
   const { id: videoId } = await params;
 
   const video = await api.videos.getVideo({ videoId });
-
-  // Get the main creator separately if creatorId is set
-  const mainCreator = video?.creatorId
-    ? await db.query.creator.findFirst({
-        where: eq(schema.creator.id, video.creatorId),
-      })
-    : null;
 
   if (!video) notFound();
 
@@ -223,8 +211,7 @@ export default async function VideoPage({
             </section>
             <VideoInfoCard
               createdAt={video.createdAt}
-              featuredCreators={video.featuredCreators}
-              mainCreator={mainCreator ?? null}
+              creators={video.creators}
               tags={video.tags}
               views={video.views}
             />

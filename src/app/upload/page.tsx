@@ -187,6 +187,15 @@ export default function UploadPage() {
         }
       }
 
+      const producer = finalCreatorId
+        ? [{ id: finalCreatorId, role: "producer" as const }]
+        : [];
+
+      const performers =
+        finalFeaturedIds?.map((id) => ({
+          id: id,
+          role: "performer" as const,
+        })) ?? [];
       // Request presigned URL via tRPC
       const sign = await generateUrl.mutateAsync({
         title: values.title,
@@ -195,9 +204,7 @@ export default function UploadPage() {
         contentType: videoFile.type || "application/octet-stream",
         thumbnailFilename: thumbFile?.name,
         thumbnailContentType: thumbFile?.type || "image/jpeg",
-        creatorId: finalCreatorId || undefined,
-        featuredCreatorIds:
-          finalFeaturedIds.length > 0 ? finalFeaturedIds : undefined,
+        creators: [...producer, ...performers],
         tags: selectedTags.length > 0 ? selectedTags : undefined,
       });
 

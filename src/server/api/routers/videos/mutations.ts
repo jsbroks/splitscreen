@@ -27,8 +27,14 @@ export const videoMutationsRouter = createTRPCRouter({
         contentType: z.string().optional(),
         thumbnailFilename: z.string().optional(),
         thumbnailContentType: z.string().optional(),
-        creatorId: z.string().optional(),
-        featuredCreatorIds: z.array(z.string()).optional(),
+        creators: z
+          .array(
+            z.object({
+              id: z.string(),
+              role: z.enum(["performer", "producer"]),
+            }),
+          )
+          .optional(),
         tags: z.array(z.string()).optional(),
       }),
     )
@@ -88,16 +94,15 @@ export const videoMutationsRouter = createTRPCRouter({
         description: input.description ?? null,
         originalKey: key,
         originalThumbnailKey: thumbnailKey ?? null,
-        creatorId: input.creatorId ?? null,
       });
 
-      // Add featured creators if provided
-      if (input.featuredCreatorIds && input.featuredCreatorIds.length > 0) {
-        await db.insert(schema.videoFeaturedCreator).values(
-          input.featuredCreatorIds.map((creatorId) => ({
+      if (input.creators && input.creators.length > 0) {
+        await db.insert(schema.videoCreator).values(
+          input.creators.map((creator) => ({
             id: nanoid(),
             videoId: videoId,
-            creatorId: creatorId,
+            creatorId: creator.id,
+            role: creator.role,
           })),
         );
       }
@@ -170,8 +175,14 @@ export const videoMutationsRouter = createTRPCRouter({
         videoId: z.string().min(1),
         title: z.string().min(1).optional(),
         description: z.string().optional(),
-        creatorId: z.string().optional(),
-        featuredCreatorIds: z.array(z.string()).optional(),
+        creators: z
+          .array(
+            z.object({
+              id: z.string(),
+              role: z.enum(["performer", "producer"]),
+            }),
+          )
+          .optional(),
       }),
     )
     .mutation(async ({ ctx, input }) => {
@@ -207,8 +218,6 @@ export const videoMutationsRouter = createTRPCRouter({
       if (input.title !== undefined) updateData.title = input.title;
       if (input.description !== undefined)
         updateData.description = input.description;
-      if (input.creatorId !== undefined)
-        updateData.creatorId = input.creatorId || null;
 
       if (Object.keys(updateData).length > 0) {
         await ctx.db
@@ -218,19 +227,20 @@ export const videoMutationsRouter = createTRPCRouter({
       }
 
       // Update featured creators if provided
-      if (input.featuredCreatorIds !== undefined) {
+      if (input.creators && input.creators.length > 0) {
         // Delete existing featured creators
         await ctx.db
-          .delete(schema.videoFeaturedCreator)
-          .where(eq(schema.videoFeaturedCreator.videoId, input.videoId));
+          .delete(schema.videoCreator)
+          .where(eq(schema.videoCreator.videoId, input.videoId));
 
         // Add new featured creators
-        if (input.featuredCreatorIds.length > 0) {
-          await ctx.db.insert(schema.videoFeaturedCreator).values(
-            input.featuredCreatorIds.map((creatorId) => ({
+        if (input.creators && input.creators.length > 0) {
+          await ctx.db.insert(schema.videoCreator).values(
+            input.creators.map((creator) => ({
               id: nanoid(),
               videoId: input.videoId,
-              creatorId: creatorId,
+              creatorId: creator.id,
+              role: creator.role,
             })),
           );
         }

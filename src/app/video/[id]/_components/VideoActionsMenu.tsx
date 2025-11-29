@@ -81,9 +81,11 @@ export function VideoActionsMenu({ videoId }: VideoActionsMenuProps) {
           initialData={{
             title: video.title,
             description: video.description,
-            creatorId: video.creatorId,
-            featuredCreatorIds:
-              video.featuredCreators?.map((fc) => fc.creatorId) ?? [],
+            creatorId: video.creators?.find((c) => c.role === "producer")
+              ?.creatorId,
+            featuredCreatorIds: video.creators
+              .filter((c) => c.role === "performer")
+              .map((c) => c.creatorId),
           }}
           onOpenChange={setEditDialogOpen}
           open={editDialogOpen}

@@ -29,7 +29,10 @@ export type EnrichedVideo = typeof schema.video.$inferSelect & {
     thumbnail25pct: string | null;
   };
   views: number;
-  featuredCreators: (typeof schema.creator.$inferSelect)[];
+  creators: Array<{
+    creator: typeof schema.creator.$inferSelect;
+    role: "performer" | "producer";
+  }>;
   tags: (typeof schema.tag.$inferSelect)[];
 };
 
@@ -86,7 +89,7 @@ export async function mapSearchResultsToVideos(
           tag: true,
         },
       },
-      featuredCreators: {
+      creators: {
         with: {
           creator: true,
         },
@@ -135,7 +138,10 @@ export async function mapSearchResultsToVideos(
         thumbnailUrl: urls.thumbnailUrl,
         videoUrl: urls.videoUrl,
         uploadedBy: video.uploadedBy,
-        featuredCreators: video.featuredCreators.map((fc) => fc.creator),
+        creators: video.creators.map((vc) => ({
+          creator: vc.creator,
+          role: vc.role,
+        })),
         tags: video.tags.map((vt) => vt.tag),
         transcode: {
           ...(transcode ?? {}),

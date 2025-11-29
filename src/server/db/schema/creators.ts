@@ -1,6 +1,6 @@
 import { relations } from "drizzle-orm";
 import { date, pgTable, text } from "drizzle-orm/pg-core";
-import { videoFeaturedCreator } from "./videos";
+import { videoCreator } from "./videos";
 
 export const creator = pgTable("creator", {
   id: text("id").primaryKey(),
@@ -21,7 +21,7 @@ export const creatorLinks = pgTable("creator_link", {
 
 export const creatorRelations = relations(creator, ({ many }) => ({
   links: many(creatorLinks),
-  featuredVideos: many(videoFeaturedCreator),
+  videos: many(videoCreator),
 }));
 
 export const creatorLinksRelations = relations(creatorLinks, ({ one }) => ({

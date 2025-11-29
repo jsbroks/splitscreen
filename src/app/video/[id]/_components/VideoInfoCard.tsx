@@ -26,8 +26,10 @@ type Tag = {
 type VideoInfoCardProps = {
   views: number;
   createdAt: Date;
-  mainCreator: Creator | null;
-  featuredCreators: Array<{ creator: Creator }>;
+  creators: Array<{
+    creator: Creator;
+    role: "performer" | "producer";
+  }>;
   tags: Tag[];
 };
 
@@ -36,13 +38,16 @@ const MAX_HEIGHT = 220;
 export function VideoInfoCard({
   views,
   createdAt,
-  mainCreator,
-  featuredCreators,
+  creators,
   tags,
 }: VideoInfoCardProps) {
   const [isExpanded, setIsExpanded] = useState(false);
   const [hasOverflow, setHasOverflow] = useState(false);
   const contentRef = useRef<HTMLDivElement>(null);
+
+  // Separate producers and performers
+  const producers = creators.filter((c) => c.role === "producer");
+  const performers = creators.filter((c) => c.role === "performer");
 
   const formattedViewsCount = new Intl.NumberFormat("en", {
     notation: "compact",
@@ -98,22 +103,33 @@ export function VideoInfoCard({
           </section>
         )}
 
-        {mainCreator && (
+        {producers.length > 0 && (
           <section className="space-y-1.5">
-            <p className="text-muted-foreground text-sm">Video Creator</p>
-            <CreatorLink creator={mainCreator} />
+            <p className="text-muted-foreground text-sm">
+              {producers.length === 1 ? "Producer" : "Producers"}
+            </p>
+            <div className="flex flex-wrap gap-1.5">
+              {producers.map((producer) => (
+                <CreatorLink
+                  creator={producer.creator}
+                  key={producer.creator.id}
+                />
+              ))}
+            </div>
           </section>
         )}
 
-        {featuredCreators.length > 0 && (
+        {performers.length > 0 && (
           <section className="space-y-1.5">
-            <p className="text-muted-foreground text-sm">Featuring</p>
+            <p className="text-muted-foreground text-sm">
+              {performers.length === 1 ? "Performer" : "Performers"}
+            </p>
 
             <div className="flex flex-wrap gap-1.5">
-              {featuredCreators.map((featuredCreator) => (
+              {performers.map((performer) => (
                 <CreatorLink
-                  creator={featuredCreator.creator}
-                  key={featuredCreator.creator.id}
+                  creator={performer.creator}
+                  key={performer.creator.id}
                 />
               ))}
             </div>

@@ -40,14 +40,9 @@ export async function upsertVideoToTypesense(
           tag: true,
         },
       },
-      featuredCreators: {
+      creators: {
         with: {
           creator: true,
-        },
-      },
-      categories: {
-        with: {
-          category: true,
         },
       },
     },
@@ -64,14 +59,6 @@ export async function upsertVideoToTypesense(
       `Video ${videoId} is deleted, skipping Typesense upsert (or use deleteVideoFromTypesense)`,
     );
     return null;
-  }
-
-  // Fetch the main creator if exists
-  let mainCreator: typeof schema.creator.$inferSelect | undefined;
-  if (video.creatorId) {
-    mainCreator = await db.query.creator.findFirst({
-      where: eq(schema.creator.id, video.creatorId),
-    });
   }
 
   // Get total view count
@@ -220,21 +207,13 @@ export async function upsertVideoToTypesense(
     title: video.title,
     description: video.description ?? undefined,
 
-    // Main creator
-    creator_id: mainCreator?.id,
-    creator_username: mainCreator?.username,
-    creator_display_name: mainCreator?.displayName,
-    creator_aliases: mainCreator?.aliases ?? undefined,
-
     // Featured creators
-    featured_creator_ids: video.featuredCreators.map((fc) => fc.creator.id),
-    featured_creator_usernames: video.featuredCreators.map(
-      (fc) => fc.creator.username,
-    ),
-    featured_creator_display_names: video.featuredCreators.map(
+    featured_creator_ids: video.creators.map((fc) => fc.creator.id),
+    featured_creator_usernames: video.creators.map((fc) => fc.creator.username),
+    featured_creator_display_names: video.creators.map(
       (fc) => fc.creator.displayName,
     ),
-    featured_creator_aliases: video.featuredCreators.flatMap(
+    featured_creator_aliases: video.creators.flatMap(
       (fc) => fc.creator.aliases,
     ),
 
@@ -242,11 +221,6 @@ export async function upsertVideoToTypesense(
     tag_ids: video.tags.map((vt) => vt.tag.id),
     tag_names: video.tags.map((vt) => vt.tag.name),
     tag_slugs: video.tags.map((vt) => vt.tag.slug),
-
-    // Categories
-    category_ids: video.categories.map((vc) => vc.category.id),
-    category_names: video.categories.map((vc) => vc.category.name),
-    category_slugs: video.categories.map((vc) => vc.category.slug),
 
     // Uploader information
     uploaded_by_id: video.uploadedById,
