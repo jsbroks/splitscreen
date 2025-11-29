@@ -20,7 +20,9 @@ async function main() {
   const daysArg = args.find((arg) => arg.startsWith("--days="));
   const dryRun = args.includes("--dry-run");
 
-  const days = daysArg ? Number.parseInt(daysArg.split("=")[1] || "30") : 30;
+  const days = daysArg
+    ? Number.parseInt(daysArg.split("=")[1] || "30", 10)
+    : 30;
   const olderThan = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
 
   console.log("📊 Video View Compression Tool\n");
