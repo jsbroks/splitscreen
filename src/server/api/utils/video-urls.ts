@@ -21,33 +21,36 @@ export function buildVideoUrls(
   video: Video,
   transcode?: TranscodeQueue | null,
 ): VideoWithUrls {
+  const basePath = env.S3_PUBLIC_URL_BASE ?? env.S3_ENDPOINT;
+  const bucket = env.S3_BUCKET;
+  const baseUrl = env.S3_FORCE_PATH_STYLE
+    ? `${basePath}/${bucket}`
+    : `${basePath}`;
   const hlsSource = transcode
-    ? `${env.S3_ENDPOINT}/${env.S3_BUCKET}/${transcode.outputPrefix}/master.m3u8`
+    ? `${baseUrl}/${transcode.outputPrefix}/master.m3u8`
     : null;
 
   const hoverPreviewMp4 = transcode
-    ? `${env.S3_ENDPOINT}/${env.S3_BUCKET}/${transcode.outputPrefix}/hover.mp4`
+    ? `${baseUrl}/${transcode.outputPrefix}/hover.mp4`
     : null;
 
   const hoverPreviewWebm = transcode
-    ? `${env.S3_ENDPOINT}/${env.S3_BUCKET}/${transcode.outputPrefix}/hover.webm`
+    ? `${baseUrl}/${transcode.outputPrefix}/hover.webm`
     : null;
 
   const thumbnailsVtt = transcode
-    ? `${env.S3_ENDPOINT}/${env.S3_BUCKET}/${transcode.outputPrefix}/thumbnails.vtt`
+    ? `${baseUrl}/${transcode.outputPrefix}/thumbnails.vtt`
     : null;
 
   const thumbnail25pct = transcode
-    ? `${env.S3_ENDPOINT}/${env.S3_BUCKET}/${transcode.outputPrefix}/thumb_25pct.jpg`
+    ? `${baseUrl}/${transcode.outputPrefix}/thumb_25pct.jpg`
     : null;
 
   const thumbnailUrl = video.originalThumbnailKey
-    ? `${env.S3_ENDPOINT}/${env.S3_BUCKET}/${video.originalThumbnailKey}`
+    ? `${baseUrl}/${video.originalThumbnailKey}`
     : null;
 
-  const videoUrl = video.originalKey
-    ? `${env.S3_ENDPOINT}/${env.S3_BUCKET}/${video.originalKey}`
-    : null;
+  const videoUrl = video.originalKey ? `${baseUrl}/${video.originalKey}` : null;
 
   return {
     hlsSource,
