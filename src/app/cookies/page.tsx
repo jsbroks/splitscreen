@@ -2,9 +2,9 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 export const metadata: Metadata = {
-  title: "Cookie Policy | SplitScreen",
+  title: "Cookie Policy | Split Haven",
   description:
-    "Learn about how SplitScreen uses cookies and tracking technologies",
+    "Learn about how Split Haven uses cookies and tracking technologies",
 };
 
 const LAST_UPDATED = "November 28, 2025";
@@ -20,7 +20,7 @@ export default function CookiePolicyPage() {
 
         <div className="rounded-lg border bg-card p-6">
           <p className="text-sm">
-            This Cookie Policy explains how SplitScreen uses cookies and similar
+            This Cookie Policy explains how Split Haven uses cookies and similar
             tracking technologies. By using our Service, you consent to the use
             of cookies as described in this policy.
           </p>
@@ -80,7 +80,7 @@ export default function CookiePolicyPage() {
             <p>
               We use cookies and similar technologies such as web beacons, local
               storage, and device fingerprinting to enhance your experience on
-              SplitScreen.
+              Split Haven.
             </p>
           </div>
 

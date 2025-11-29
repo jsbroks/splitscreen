@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
 import { InfiniteCreatorGrid } from "./_components/InfiniteCreatorGrid";
 
-const SITE_NAME = "SplitScreen";
+const SITE_NAME = "Split Haven";
 const SITE_DESCRIPTION =
-  "Browse all content creators on SplitScreen. Discover your favorite performers and their videos.";
+  "Browse all content creators on Split Haven. Discover your favorite performers and their videos.";
 const SITE_URL = process.env.NEXT_PUBLIC_APP_URL;
 
 export const metadata: Metadata = {
@@ -68,7 +68,7 @@ export default async function CreatorsPage() {
               All Creators
             </h1>
             <p className="text-muted-foreground">
-              Browse content creators on SplitScreen
+              Browse content creators on Split Haven
             </p>
           </div>
 

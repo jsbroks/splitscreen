@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 export const metadata: Metadata = {
-  title: "Terms of Service | SplitScreen",
-  description: "Terms of Service for SplitScreen video sharing platform",
+  title: "Terms of Service | Split Haven",
+  description: "Terms of Service for Split Haven video sharing platform",
 };
 
 const LAST_UPDATED = "November 28, 2025";
@@ -20,7 +20,7 @@ export default function TermsOfServicePage() {
         <div className="rounded-lg border bg-card p-6">
           <p className="text-sm">
             <strong>Important:</strong> Please read these Terms of Service
-            carefully before using SplitScreen. By accessing or using our
+            carefully before using Split Haven. By accessing or using our
             service, you agree to be bound by these terms.
           </p>
         </div>
@@ -85,7 +85,7 @@ export default function TermsOfServicePage() {
           <div className="space-y-4" id="acceptance">
             <h2 className="font-bold text-2xl">1. Acceptance of Terms</h2>
             <p>
-              By accessing or using SplitScreen ("Service", "we", "us", or
+              By accessing or using Split Haven ("Service", "we", "us", or
               "our"), you agree to be bound by these Terms of Service and all
               applicable laws and regulations. If you do not agree with any part
               of these terms, you may not use our Service.
@@ -332,7 +332,7 @@ export default function TermsOfServicePage() {
 
             <h3 className="font-semibold text-xl">8.3 Indemnification</h3>
             <p>
-              You agree to indemnify, defend, and hold harmless SplitScreen and
+              You agree to indemnify, defend, and hold harmless Split Haven and
               its officers, directors, employees, and agents from any claims,
               liabilities, damages, losses, and expenses, including legal fees,
               arising out of or in any way connected with:

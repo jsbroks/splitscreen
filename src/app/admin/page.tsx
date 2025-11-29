@@ -11,7 +11,7 @@ import { TypesenseSync } from "./_components/TypesenseSync";
 
 export const metadata: Metadata = {
   title: "Admin Dashboard",
-  description: "Manage content and settings on SplitScreen",
+  description: "Manage content and settings on Split Haven",
   robots: {
     index: false,
     follow: false,

@@ -4,7 +4,7 @@ import * as schema from "~/server/db/schema";
 import { HydrateClient } from "~/trpc/server";
 import { VideoDiscovery } from "./_components/VideoDiscovery";
 
-const SITE_NAME = "SplitScreen";
+const SITE_NAME = "Split Haven";
 const SITE_DESCRIPTION =
   "Explore a curated collection of captivating splitscreen videos.";
 const SITE_URL = process.env.NEXT_PUBLIC_APP_URL;

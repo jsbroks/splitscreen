@@ -2,9 +2,9 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 export const metadata: Metadata = {
-  title: "Content Guidelines | SplitScreen",
+  title: "Content Guidelines | Split Haven",
   description:
-    "Community guidelines and content standards for SplitScreen video platform",
+    "Community guidelines and content standards for Split Haven video platform",
 };
 
 const LAST_UPDATED = "November 28, 2025";
@@ -20,9 +20,9 @@ export default function ContentGuidelinesPage() {
 
         <div className="rounded-lg border bg-card p-6">
           <p className="text-sm">
-            <strong>Welcome to SplitScreen!</strong> These Content Guidelines
+            <strong>Welcome to Split Haven!</strong> These Content Guidelines
             help ensure our community remains safe, respectful, and enjoyable
-            for everyone. All content uploaded to SplitScreen must comply with
+            for everyone. All content uploaded to Split Haven must comply with
             these guidelines and our{" "}
             <Link className="text-primary hover:underline" href="/terms">
               Terms of Service
@@ -81,7 +81,7 @@ export default function ContentGuidelinesPage() {
           <div className="space-y-4" id="overview">
             <h2 className="font-bold text-2xl">1. Overview</h2>
             <p>
-              SplitScreen is a platform for sharing video content. We want to
+              Split Haven is a platform for sharing video content. We want to
               maintain a positive and safe environment for all users. These
               guidelines apply to all content, including:
             </p>
@@ -98,7 +98,7 @@ export default function ContentGuidelinesPage() {
             <h2 className="font-bold text-2xl">2. Prohibited Content</h2>
             <p>
               The following types of content are strictly prohibited on
-              SplitScreen:
+              Split Haven:
             </p>
 
             <div className="space-y-6">
@@ -576,7 +576,7 @@ export default function ContentGuidelinesPage() {
 
             <p className="text-muted-foreground text-sm">
               These guidelines may be updated from time to time. Continued use
-              of SplitScreen constitutes acceptance of the current guidelines.
+              of Split Haven constitutes acceptance of the current guidelines.
             </p>
           </div>
         </section>

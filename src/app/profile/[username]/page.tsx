@@ -9,7 +9,7 @@ import * as schema from "~/server/db/schema";
 import { api } from "~/trpc/server";
 import { ProfileVideos } from "./_components/ProfileVideos";
 
-const SITE_NAME = "SplitScreen";
+const SITE_NAME = "Split Haven";
 const SITE_URL = process.env.NEXT_PUBLIC_APP_URL;
 
 export async function generateMetadata({

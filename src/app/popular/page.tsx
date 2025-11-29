@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 import { HydrateClient } from "~/trpc/server";
 import { InfiniteVideoGrid } from "../_components/InfiniteVideoGrid";
 
-const SITE_NAME = "SplitScreen";
+const SITE_NAME = "Split Haven";
 const SITE_DESCRIPTION =
   "Watch the most popular splitscreen videos of all time.";
 const SITE_URL = process.env.NEXT_PUBLIC_APP_URL;

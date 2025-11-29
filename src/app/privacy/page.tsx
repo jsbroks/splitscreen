@@ -2,9 +2,9 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 export const metadata: Metadata = {
-  title: "Privacy Policy | SplitScreen",
+  title: "Privacy Policy | Split Haven",
   description:
-    "Privacy Policy for SplitScreen - Learn how we collect, use, and protect your data",
+    "Privacy Policy for Split Haven - Learn how we collect, use, and protect your data",
 };
 
 const LAST_UPDATED = "November 28, 2025";
@@ -21,7 +21,7 @@ export default function PrivacyPolicyPage() {
         <div className="rounded-lg border bg-card p-6">
           <p className="text-sm">
             <strong>Your Privacy Matters:</strong> This Privacy Policy explains
-            how SplitScreen collects, uses, shares, and protects your personal
+            how Split Haven collects, uses, shares, and protects your personal
             information. We are committed to protecting your privacy and
             complying with data protection laws including GDPR and COPPA.
           </p>
@@ -97,14 +97,14 @@ export default function PrivacyPolicyPage() {
           <div className="space-y-4" id="overview">
             <h2 className="font-bold text-2xl">1. Overview</h2>
             <p>
-              SplitScreen ("we", "us", "our") operates a video sharing platform.
+              Split Haven ("we", "us", "our") operates a video sharing platform.
               This Privacy Policy applies to information we collect when you use
               our website, mobile applications, and services (collectively, the
               "Service").
             </p>
             <p>
               <strong>Data Controller:</strong> For the purposes of GDPR,
-              SplitScreen is the data controller responsible for your personal
+              Split Haven is the data controller responsible for your personal
               data.
             </p>
             <p>
@@ -289,7 +289,7 @@ export default function PrivacyPolicyPage() {
               <li>Comply with legal processes or government requests</li>
               <li>Enforce our Terms of Service</li>
               <li>
-                Protect the rights, property, or safety of SplitScreen, our
+                Protect the rights, property, or safety of Split Haven, our
                 users, or others
               </li>
               <li>Investigate fraud or security issues</li>

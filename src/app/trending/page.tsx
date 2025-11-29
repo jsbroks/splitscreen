@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 import { HydrateClient } from "~/trpc/server";
 import { InfiniteVideoGrid } from "../_components/InfiniteVideoGrid";
 
-const SITE_NAME = "SplitScreen";
+const SITE_NAME = "Split Haven";
 const SITE_DESCRIPTION =
   "Discover trending splitscreen videos that are gaining popularity right now.";
 const SITE_URL = process.env.NEXT_PUBLIC_APP_URL;
@@ -70,7 +70,7 @@ export default function TrendingPage() {
               Trending Videos
             </h1>
             <p className="text-muted-foreground">
-              Discover what's hot right now on SplitScreen
+              Discover what's hot right now on Split Haven
             </p>
           </div>
 

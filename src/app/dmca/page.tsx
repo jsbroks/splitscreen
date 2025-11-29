@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "DMCA Policy | SplitScreen",
-  description: "Digital Millennium Copyright Act (DMCA) Policy for SplitScreen",
+  title: "DMCA Policy | Split Haven",
+  description: "Digital Millennium Copyright Act (DMCA) Policy for Split Haven",
 };
 
 const LAST_UPDATED = "November 28, 2025";
@@ -18,7 +18,7 @@ export default function DMCAPage() {
 
         <div className="rounded-lg border bg-card p-6">
           <p className="text-sm">
-            SplitScreen respects the intellectual property rights of others and
+            Split Haven respects the intellectual property rights of others and
             expects our users to do the same. We respond to notices of alleged
             copyright infringement that comply with the Digital Millennium
             Copyright Act ("DMCA").
@@ -65,7 +65,7 @@ export default function DMCAPage() {
           <div className="space-y-4" id="overview">
             <h2 className="font-bold text-2xl">1. Overview</h2>
             <p>
-              If you believe that content available on SplitScreen infringes
+              If you believe that content available on Split Haven infringes
               your copyright, you may submit a DMCA takedown notice. We will
               review all complete notices and take appropriate action, which may
               include removing or disabling access to the allegedly infringing
@@ -140,7 +140,7 @@ export default function DMCAPage() {
               <div className="rounded-lg bg-muted p-4">
                 <h3 className="font-semibold">Example DMCA Notice:</h3>
                 <pre className="mt-3 whitespace-pre-wrap text-xs">
-                  {`To: DMCA Agent, SplitScreen
+                  {`To: DMCA Agent, Split Haven
 From: [Your Name]
 Date: [Date]
 
@@ -149,7 +149,7 @@ intellectual property rights in the following copyrighted work:
 
 [Description of your copyrighted work]
 
-I have a good faith belief that the following material available on SplitScreen 
+I have a good faith belief that the following material available on Split Haven 
 infringes my copyright:
 
 [URL(s) of allegedly infringing content]
@@ -351,7 +351,7 @@ Date: [Date]`}
               <p>
                 <strong>DMCA Agent</strong>
               </p>
-              <p>SplitScreen</p>
+              <p>Split Haven</p>
               <p>[Your Company Legal Name]</p>
               <p>[Street Address]</p>
               <p>[City, State ZIP Code]</p>

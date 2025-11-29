@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { SearchContent } from "./SearchContent";
 
-const SITE_NAME = "SplitScreen";
+const SITE_NAME = "Split Haven";
 const SITE_DESCRIPTION =
   "Search for splitscreen videos. Find your favorite content and creators.";
 const SITE_URL = process.env.NEXT_PUBLIC_APP_URL;

@@ -36,7 +36,7 @@ export async function generateMetadata({
 
   if (!result) {
     return {
-      title: "Video not found | Splitscreen",
+      title: "Video not found | Split Haven",
       robots: { index: false, follow: false },
     };
   }
@@ -47,7 +47,7 @@ export async function generateMetadata({
     creator?.username ??
     user.displayUsername ??
     user.username;
-  const title = `${video.title} by ${author} | Splitscreen`;
+  const title = `${video.title} by ${author} | Split Haven`;
   const description = `Watch ${video.title} created ${formatDistanceToNow(video.createdAt)} ago by ${author}.`;
 
   return {

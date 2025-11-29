@@ -10,7 +10,7 @@ import { AgeVerification } from "./_components/AgeVerification";
 import { Footer } from "./_components/Footer";
 import { Navbar } from "./_components/Navbar";
 
-const SITE_NAME = "SplitScreen";
+const SITE_NAME = "Split Haven";
 const SITE_URL = process.env.NEXT_PUBLIC_APP_URL;
 
 export const metadata: Metadata = {

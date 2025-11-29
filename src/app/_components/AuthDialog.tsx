@@ -125,7 +125,7 @@ export function AuthDialog({ mode = "signin", trigger }: AuthDialogProps) {
             <DialogDescription>
               {isLogin
                 ? "Enter your credentials to access your account"
-                : "Sign up to get started with SplitScreen"}
+                : "Sign up to get started with Split Haven"}
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">

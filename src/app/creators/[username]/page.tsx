@@ -20,7 +20,7 @@ import { db, eq } from "~/server/db";
 import * as schema from "~/server/db/schema";
 import { CreatorVideos } from "./_components/CreatorVideos";
 
-const SITE_NAME = "SplitScreen";
+const SITE_NAME = "Split Haven";
 const SITE_URL = process.env.NEXT_PUBLIC_APP_URL;
 
 export async function generateMetadata({

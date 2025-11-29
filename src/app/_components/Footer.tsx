@@ -9,7 +9,7 @@ export function Footer() {
         <div className="grid gap-8 md:grid-cols-4">
           {/* About Section */}
           <div className="space-y-4">
-            <h3 className="font-semibold text-lg">SplitScreen</h3>
+            <h3 className="font-semibold text-lg">Split Haven</h3>
             <p className="text-muted-foreground text-sm">
               A platform for discovering and sharing split-screen video content.
             </p>
@@ -136,7 +136,7 @@ export function Footer() {
         <div className="mt-8 border-t pt-8">
           <div className="flex flex-col items-center justify-between gap-4 md:flex-row">
             <p className="text-muted-foreground text-sm">
-              © {currentYear} SplitScreen. All rights reserved.
+              © {currentYear} Split Haven. All rights reserved.
             </p>
             <div className="flex items-center gap-4 text-sm">
               <p className="text-muted-foreground">

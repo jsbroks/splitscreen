@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 
-const SITE_NAME = "SplitScreen";
+const SITE_NAME = "Split Haven";
 const SITE_DESCRIPTION =
   "Upload and share your splitscreen videos with the community.";
 const SITE_URL = process.env.NEXT_PUBLIC_APP_URL;
