@@ -57,10 +57,6 @@ export const video = pgTable("video", {
     .$onUpdate(() => /* @__PURE__ */ new Date())
     .notNull(),
 
-  creatorId: text("creator_id").references(() => creator.id, {
-    onDelete: "cascade",
-  }),
-
   deletedAt: timestamp("deleted_at"),
 });
 
@@ -77,7 +73,12 @@ export const videoRelations = relations(video, ({ many, one }) => ({
   transcodeQueue: many(transcodeQueue),
 }));
 
-export const videoFeaturedCreator = pgTable("video_featured_creator", {
+export const creatorRoleEnum = pgEnum("creator_role", [
+  "performer",
+  "producer",
+]);
+
+export const videoFeaturedCreator = pgTable("video_creator", {
   id: text("id").primaryKey(),
   videoId: text("video_id")
     .notNull()
@@ -85,6 +86,7 @@ export const videoFeaturedCreator = pgTable("video_featured_creator", {
   creatorId: text("creator_id")
     .notNull()
     .references(() => creator.id, { onDelete: "cascade" }),
+  role: creatorRoleEnum("role").notNull().default("performer"),
 });
 
 export const videoFeaturedCreatorRelations = relations(

@@ -6,14 +6,21 @@ This script demonstrates two authentication methods:
 1. API Key authentication (recommended for programmatic access)
 2. Session-based authentication (for user-authenticated requests)
 
+Features:
+- Upload videos from local files or URLs
+- Upload thumbnails from local files or URLs
+- Automatic download and cleanup of temporary files for URLs
+
 Requirements:
     pip install requests
 """
 
 import os
 import sys
+import tempfile
 from pathlib import Path
 from typing import Optional
+from urllib.parse import urlparse
 
 import requests
 
@@ -151,10 +158,10 @@ class VideoUploader:
         Complete video upload workflow: create video and upload files.
 
         Args:
-            video_path: Path to video file
+            video_path: Path to video file or URL
             title: Video title
             description: Optional video description
-            thumbnail_path: Optional path to thumbnail image
+            thumbnail_path: Optional path to thumbnail image or URL
             creator_id: Optional creator ID
             featured_creator_ids: Optional list of featured creator IDs
             tags: Optional list of tags
@@ -163,57 +170,138 @@ class VideoUploader:
         Returns:
             dict: Response containing videoId and other details
         """
-        video_file = Path(video_path)
-        if not video_file.exists():
-            raise FileNotFoundError(f"Video file not found: {video_path}")
+        temp_video_path = None
+        temp_thumbnail_path = None
 
-        # Detect content type
-        content_type = self._get_content_type(video_file)
+        try:
+            # Handle video path (local file or URL)
+            if self._is_url(video_path):
+                # Extract file extension from URL
+                parsed_url = urlparse(video_path)
+                path_suffix = Path(parsed_url.path).suffix or ".mp4"
+                temp_video_path = self._download_file(video_path, suffix=path_suffix)
+                actual_video_path = temp_video_path
+            else:
+                actual_video_path = video_path
+                video_file = Path(actual_video_path)
+                if not video_file.exists():
+                    raise FileNotFoundError(f"Video file not found: {video_path}")
 
-        # Prepare thumbnail info if provided
-        thumbnail_filename = None
-        thumbnail_content_type = None
-        if thumbnail_path:
-            thumb_file = Path(thumbnail_path)
-            if not thumb_file.exists():
-                raise FileNotFoundError(f"Thumbnail file not found: {thumbnail_path}")
-            thumbnail_filename = thumb_file.name
-            thumbnail_content_type = self._get_content_type(thumb_file)
+            video_file = Path(actual_video_path)
+            content_type = self._get_content_type(video_file)
 
-        # Create video and get upload URLs
-        print(f"Creating video upload for: {title}")
-        response = self.create_video(
-            title=title,
-            filename=video_file.name,
-            description=description,
-            content_type=content_type,
-            thumbnail_filename=thumbnail_filename,
-            thumbnail_content_type=thumbnail_content_type,
-            creator_id=creator_id,
-            featured_creator_ids=featured_creator_ids,
-            tags=tags,
-            user_id=user_id,
-        )
+            # Handle thumbnail path (local file or URL)
+            thumbnail_filename = None
+            thumbnail_content_type = None
+            actual_thumbnail_path = None
+            
+            if thumbnail_path:
+                if self._is_url(thumbnail_path):
+                    # Extract file extension from URL
+                    parsed_url = urlparse(thumbnail_path)
+                    path_suffix = Path(parsed_url.path).suffix or ".jpg"
+                    temp_thumbnail_path = self._download_file(thumbnail_path, suffix=path_suffix)
+                    actual_thumbnail_path = temp_thumbnail_path
+                else:
+                    actual_thumbnail_path = thumbnail_path
+                    thumb_file = Path(actual_thumbnail_path)
+                    if not thumb_file.exists():
+                        raise FileNotFoundError(f"Thumbnail file not found: {thumbnail_path}")
+                
+                thumb_file = Path(actual_thumbnail_path)
+                thumbnail_filename = thumb_file.name
+                thumbnail_content_type = self._get_content_type(thumb_file)
 
-        video_id = response["videoId"]
-        print(f"Video created with ID: {video_id}")
-
-        # Upload video file
-        print(f"Uploading video file: {video_path}")
-        self.upload_file_to_s3(response["uploadUrl"], video_path, content_type)
-        print("Video file uploaded successfully")
-
-        # Upload thumbnail if provided
-        if thumbnail_path and response.get("thumbnailUploadUrl"):
-            print(f"Uploading thumbnail: {thumbnail_path}")
-            self.upload_file_to_s3(
-                response["thumbnailUploadUrl"],
-                thumbnail_path,
-                thumbnail_content_type or "image/jpeg",
+            # Create video and get upload URLs
+            print(f"Creating video upload for: {title}")
+            response = self.create_video(
+                title=title,
+                filename=video_file.name,
+                description=description,
+                content_type=content_type,
+                thumbnail_filename=thumbnail_filename,
+                thumbnail_content_type=thumbnail_content_type,
+                creator_id=creator_id,
+                featured_creator_ids=featured_creator_ids,
+                tags=tags,
+                user_id=user_id,
             )
-            print("Thumbnail uploaded successfully")
 
-        return response
+            video_id = response["videoId"]
+            print(f"Video created with ID: {video_id}")
+
+            # Upload video file
+            print(f"Uploading video file: {actual_video_path}")
+            self.upload_file_to_s3(response["uploadUrl"], actual_video_path, content_type)
+            print("Video file uploaded successfully")
+
+            # Upload thumbnail if provided
+            if actual_thumbnail_path and response.get("thumbnailUploadUrl"):
+                print(f"Uploading thumbnail: {actual_thumbnail_path}")
+                self.upload_file_to_s3(
+                    response["thumbnailUploadUrl"],
+                    actual_thumbnail_path,
+                    thumbnail_content_type or "image/jpeg",
+                )
+                print("Thumbnail uploaded successfully")
+
+            return response
+
+        finally:
+            # Clean up temporary files
+            if temp_video_path and os.path.exists(temp_video_path):
+                print(f"Cleaning up temporary video file: {temp_video_path}")
+                os.unlink(temp_video_path)
+            if temp_thumbnail_path and os.path.exists(temp_thumbnail_path):
+                print(f"Cleaning up temporary thumbnail file: {temp_thumbnail_path}")
+                os.unlink(temp_thumbnail_path)
+
+    @staticmethod
+    def _is_url(path: str) -> bool:
+        """Check if a path is a URL."""
+        try:
+            result = urlparse(path)
+            return all([result.scheme, result.netloc])
+        except Exception:
+            return False
+
+    @staticmethod
+    def _download_file(url: str, suffix: Optional[str] = None) -> str:
+        """
+        Download a file from a URL to a temporary location.
+
+        Args:
+            url: The URL to download from
+            suffix: Optional file suffix/extension (e.g., ".mp4")
+
+        Returns:
+            str: Path to the downloaded temporary file
+        """
+        print(f"Downloading file from URL: {url}")
+        response = requests.get(url, stream=True)
+        response.raise_for_status()
+
+        # Create a temporary file
+        temp_file = tempfile.NamedTemporaryFile(delete=False, suffix=suffix)
+        
+        # Download the file in chunks
+        total_size = int(response.headers.get('content-length', 0))
+        downloaded = 0
+        chunk_size = 8192
+        
+        with temp_file:
+            for chunk in response.iter_content(chunk_size=chunk_size):
+                if chunk:
+                    temp_file.write(chunk)
+                    downloaded += len(chunk)
+                    if total_size > 0:
+                        progress = (downloaded / total_size) * 100
+                        print(f"\rDownload progress: {progress:.1f}%", end="", flush=True)
+        
+        if total_size > 0:
+            print()  # New line after progress
+        print(f"Downloaded to temporary file: {temp_file.name}")
+        return temp_file.name
 
     @staticmethod
     def _get_content_type(file_path: Path) -> str:
@@ -241,7 +329,6 @@ def main():
     API_BASE_URL = os.getenv("API_BASE_URL", "http://localhost:3000")
     API_KEY = os.getenv("API_KEY")  # Your API key
     USER_ID = os.getenv("USER_ID")  # Required when using API key
-    SESSION_COOKIE = os.getenv("SESSION_COOKIE")  # Alternative to API key
 
     # Example 1: Upload with API key authentication
     if API_KEY and USER_ID:
@@ -250,11 +337,12 @@ def main():
         uploader = VideoUploader(base_url=API_BASE_URL, api_key=API_KEY)
 
         try:
+            # You can use either local file paths or URLs
             result = uploader.upload_video(
-                video_path="path/to/your/video.mp4",
+                video_path="path/to/your/video.mp4",  # Or use a URL: "https://example.com/video.mp4"
                 title="My Awesome Video",
                 description="This is a great video uploaded via API",
-                thumbnail_path="path/to/your/thumbnail.jpg",  # Optional
+                thumbnail_path="path/to/your/thumbnail.jpg",  # Optional - also supports URLs
                 tags=["gaming", "tutorial"],  # Optional
                 user_id=USER_ID,
             )

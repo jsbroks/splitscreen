@@ -8,6 +8,20 @@
       "when": 1764394285522,
       "tag": "0000_curious_carmella_unuscione",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1764454265038,
+      "tag": "0001_light_gunslinger",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1764454424318,
+      "tag": "0002_familiar_leech",
+      "breakpoints": true
     }
   ]
 }
