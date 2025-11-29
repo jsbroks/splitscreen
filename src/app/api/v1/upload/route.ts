@@ -21,6 +21,7 @@ const videoUploadSchema = z.object({
   creatorId: z.string().optional(),
   featuredCreatorIds: z.array(z.string()).optional(),
   tags: z.array(z.string()).optional(),
+  createdAt: z.date().optional(),
 });
 
 export async function POST(request: Request) {
@@ -138,6 +139,8 @@ async function handleVideoUpload(
     originalKey: key,
     originalThumbnailKey: thumbnailKey ?? null,
     creatorId: input.creatorId ?? null,
+    createdAt: input.createdAt ?? new Date(),
+    status: "approved",
   });
 
   // Add featured creators if provided

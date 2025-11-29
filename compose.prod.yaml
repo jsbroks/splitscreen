@@ -9,6 +9,8 @@ services:
     labels:
       portway.route.path: /
     environment:
+      NEXT_PUBLIC_APP_URL: https://splithaven.com
+
       BETTER_AUTH_SECRET: voZW7ZzYqt1JWmGq
       BETTER_AUTH_URL: https://splithaven.com
 

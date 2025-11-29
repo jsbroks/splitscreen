@@ -23,6 +23,7 @@ COPY . .
 
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV SKIP_ENV_VALIDATION=1
+ENV NEXT_PUBLIC_APP_URL=https://splithaven.com
 
 RUN corepack enable pnpm && pnpm run build
 

@@ -39,6 +39,13 @@ export default async function RootLayout({
 
   return (
     <html className={`${geist.variable} dark dark:bg-black`} lang="en">
+      <head>
+        <script
+          data-website-id="ee09c5cc-7555-4da0-88fa-3dec245ee09f"
+          defer
+          src="https://cloud.umami.is/script.js"
+        />
+      </head>
       <body className="flex min-h-screen flex-col">
         <NuqsAdapter>
           <TRPCReactProvider>
