@@ -114,3 +114,69 @@ func truncate(s string, n int) string {
 	}
 	return s[:n]
 }
+
+// ProcessingStatus represents the status of individual processing tasks
+type ProcessingStatus string
+
+const (
+	ProcessingStatusPending    ProcessingStatus = "pending"
+	ProcessingStatusProcessing ProcessingStatus = "processing"
+	ProcessingStatusDone       ProcessingStatus = "done"
+	ProcessingStatusFailed     ProcessingStatus = "failed"
+)
+
+// UpdateHLSStatus updates the HLS transcoding status
+func UpdateHLSStatus(ctx context.Context, db *sql.DB, jobID string, status ProcessingStatus) error {
+	_, err := db.ExecContext(ctx, `
+		UPDATE transcode_queue
+		SET hls_status = $1,
+		    updated_at = NOW()
+		WHERE id = $2
+	`, status, jobID)
+	if err != nil {
+		return fmt.Errorf("update hls status: %w", err)
+	}
+	return nil
+}
+
+// UpdatePosterStatus updates the poster generation status
+func UpdatePosterStatus(ctx context.Context, db *sql.DB, jobID string, status ProcessingStatus) error {
+	_, err := db.ExecContext(ctx, `
+		UPDATE transcode_queue
+		SET poster_status = $1,
+		    updated_at = NOW()
+		WHERE id = $2
+	`, status, jobID)
+	if err != nil {
+		return fmt.Errorf("update poster status: %w", err)
+	}
+	return nil
+}
+
+// UpdateScrubberPreviewStatus updates the scrubber preview (thumbnails/VTT) generation status
+func UpdateScrubberPreviewStatus(ctx context.Context, db *sql.DB, jobID string, status ProcessingStatus) error {
+	_, err := db.ExecContext(ctx, `
+		UPDATE transcode_queue
+		SET scrubber_preview_status = $1,
+		    updated_at = NOW()
+		WHERE id = $2
+	`, status, jobID)
+	if err != nil {
+		return fmt.Errorf("update scrubber preview status: %w", err)
+	}
+	return nil
+}
+
+// UpdateHoverPreviewStatus updates the hover preview generation status
+func UpdateHoverPreviewStatus(ctx context.Context, db *sql.DB, jobID string, status ProcessingStatus) error {
+	_, err := db.ExecContext(ctx, `
+		UPDATE transcode_queue
+		SET hover_preview_status = $1,
+		    updated_at = NOW()
+		WHERE id = $2
+	`, status, jobID)
+	if err != nil {
+		return fmt.Errorf("update hover preview status: %w", err)
+	}
+	return nil
+}

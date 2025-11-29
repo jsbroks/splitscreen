@@ -1,7 +1,7 @@
 import { TRPCError } from "@trpc/server";
 import { nanoid } from "nanoid";
 import { z } from "zod";
-import { eq } from "~/server/db";
+import { eq, or, isNull, inArray, asc } from "~/server/db";
 import * as schema from "~/server/db/schema";
 import { adminProcedure, createTRPCRouter, publicProcedure } from "../trpc";
 
@@ -76,16 +76,43 @@ export const creatorsRouter = createTRPCRouter({
       }),
     )
     .query(async ({ ctx, input }) => {
-      const creators = await ctx.db.query.creator.findMany({
-        with: {
-          links: true,
-        },
-        orderBy: (creators, { asc }) => [asc(creators.displayName)],
-        limit: input.limit,
-        offset: input.cursor,
-      });
+      try {
+        const performers = await ctx.db
+          .selectDistinctOn([schema.creator.username])
+          .from(schema.creator)
+          .leftJoin(
+            schema.videoFeaturedCreator,
+            eq(schema.creator.id, schema.videoFeaturedCreator.creatorId),
+          )
+          .where(
+            or(
+              eq(schema.videoFeaturedCreator.role, "performer"),
+              isNull(schema.videoFeaturedCreator.role),
+            ),
+          )
+          .orderBy(asc(schema.creator.username))
+          .limit(input.limit)
+          .offset(input.cursor);
 
-      return creators;
+        const creators = await ctx.db.query.creator.findMany({
+          where: inArray(
+            schema.creator.id,
+            performers.map((performer) => performer.creator.id),
+          ),
+          with: { links: true },
+          orderBy: (creators, { asc }) => [asc(creators.displayName)],
+          limit: input.limit,
+          offset: input.cursor,
+        });
+
+        return creators;
+      } catch (error) {
+        console.error("Error fetching creators:", error);
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Error fetching creators",
+        });
+      }
     }),
 
   getByUsername: publicProcedure
