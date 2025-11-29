@@ -28,13 +28,10 @@ export default function VideosAdminPage() {
   const [rejectingVideoId, setRejectingVideoId] = useState<string | null>(null);
   const [rejectionMessage, setRejectionMessage] = useState("");
 
-  const { data: videos, isLoading } = api.videos.videos.useQuery({
-    status:
-      selectedStatus === "all_pending"
-        ? ["uploaded", "processing", "in_review", "failed"]
-        : ["in_review"],
+  const { data: videos, isLoading } = api.videos.search.useQuery({
     limit: 100,
-    orderBy: "oldest",
+    status: "in_review",
+    sortBy: { field: "created_at", direction: "asc" },
   });
 
   const utils = api.useUtils();
@@ -42,7 +39,7 @@ export default function VideosAdminPage() {
   const approveVideo = api.videos.approveVideo.useMutation({
     onSuccess: () => {
       toast.success("Video approved successfully");
-      void utils.videos.videos.invalidate();
+      void utils.videos.search.invalidate();
     },
     onError: (error) => {
       toast.error(error.message);
@@ -55,7 +52,7 @@ export default function VideosAdminPage() {
       setRejectDialogOpen(false);
       setRejectingVideoId(null);
       setRejectionMessage("");
-      void utils.videos.videos.invalidate();
+      void utils.videos.search.invalidate();
     },
     onError: (error) => {
       toast.error(error.message);

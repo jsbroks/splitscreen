@@ -116,12 +116,15 @@ export default async function VideoPage({
       ? video.transcode.hlsSource
       : video.videoUrl;
 
+  const relatedVideos = await api.videos.related({ videoId, limit: 3 + 4 * 4 });
+  const first3RelatedVideos = relatedVideos.slice(0, 3);
+  const remainingRelatedVideos = relatedVideos.slice(3, Infinity);
+
   return (
     <main>
       {session == null && <FingerPrintViewCounter videoId={video.id} />}
       <div className="container mx-auto max-w-7xl space-y-3 px-6 py-12">
-        {(video.status === "processing" ||
-          video.transcode?.status !== "done") && (
+        {video.transcode?.status !== "done" && (
           <Alert variant="destructive">
             <AlertTitle>
               This video is processing. Loading may be slow until it is ready.
@@ -229,9 +232,9 @@ export default async function VideoPage({
 
           <div className="hidden w-[300px] shrink-0 lg:block">
             <div className="grid grid-cols-1 gap-3">
-              <VideoCard id="1" title="Video 1" views={1000} />
-              <VideoCard id="2" title="Video 2" views={1000} />
-              <VideoCard id="3" title="Video 3" views={1000} />
+              {first3RelatedVideos.map((v) => (
+                <VideoCard key={v.id} {...v} />
+              ))}
             </div>
           </div>
         </div>
@@ -239,16 +242,9 @@ export default async function VideoPage({
         <section className="space-y-2 py-4">
           <p className="text-muted-foreground">Related videos</p>
           <div className="grid grid-cols-2 gap-3 md:grid-cols-4 lg:grid-cols-4">
-            <VideoCard id="1" title="Video 1" views={1000} />
-            <VideoCard id="2" title="Video 2" views={1000} />
-            <VideoCard id="3" title="Video 3" views={1000} />
-            <VideoCard id="4" title="Video 4" views={1000} />
-            <VideoCard id="5" title="Video 5" views={1000} />
-            <VideoCard id="6" title="Video 6" views={1000} />
-            <VideoCard id="7" title="Video 7" views={1000} />
-            <VideoCard id="8" title="Video 8" views={1000} />
-            <VideoCard id="9" title="Video 9" views={1000} />
-            <VideoCard id="10" title="Video 10" views={1000} />
+            {remainingRelatedVideos.map((v) => (
+              <VideoCard key={v.id} {...v} />
+            ))}
           </div>
         </section>
       </div>

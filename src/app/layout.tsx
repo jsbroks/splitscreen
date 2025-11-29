@@ -2,6 +2,7 @@ import "~/styles/globals.css";
 
 import type { Metadata } from "next";
 import { Geist } from "next/font/google";
+import { NuqsAdapter } from "nuqs/adapters/next/app";
 import { Toaster } from "~/components/ui/sonner";
 import { getSession } from "~/server/better-auth/server";
 import { TRPCReactProvider } from "~/trpc/react";
@@ -28,13 +29,15 @@ export default async function RootLayout({
   return (
     <html className={`${geist.variable} dark dark:bg-black`} lang="en">
       <body className="flex min-h-screen flex-col">
-        <TRPCReactProvider>
-          <Navbar user={session?.user} />
-          <div className="flex-1">{children}</div>
-          <Footer />
-          <AgeVerification />
-          <Toaster />
-        </TRPCReactProvider>
+        <NuqsAdapter>
+          <TRPCReactProvider>
+            <Navbar user={session?.user} />
+            <div className="flex-1">{children}</div>
+            <Footer />
+            <AgeVerification />
+            <Toaster />
+          </TRPCReactProvider>
+        </NuqsAdapter>
       </body>
     </html>
   );

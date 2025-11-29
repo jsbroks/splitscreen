@@ -6,14 +6,20 @@ import { api } from "~/trpc/react";
 import { VideoCard } from "./VideoCard";
 
 interface InfiniteVideoGridProps {
-  orderBy?: "newest" | "oldest" | "most_views";
+  sortBy?: {
+    field:
+      | "created_at"
+      | "view_count"
+      | "popularity_score"
+      | "duration_seconds";
+    direction: "asc" | "desc";
+  };
+  timePeriod?: "all-time" | "this-week" | "this-month" | "this-year";
 }
 
 const LIMIT = 24;
 
-export function InfiniteVideoGrid({
-  orderBy = "newest",
-}: InfiniteVideoGridProps) {
+export function InfiniteVideoGrid({ sortBy }: InfiniteVideoGridProps) {
   const {
     data,
     fetchNextPage,
@@ -21,10 +27,10 @@ export function InfiniteVideoGrid({
     isFetchingNextPage,
     isLoading,
     isError,
-  } = api.videos.videos.useInfiniteQuery(
+  } = api.videos.search.useInfiniteQuery(
     {
       limit: LIMIT,
-      orderBy,
+      sortBy: sortBy ?? { field: "created_at", direction: "desc" },
     },
     {
       getNextPageParam: (lastPage, allPages) => {
@@ -32,9 +38,7 @@ export function InfiniteVideoGrid({
         if (!lastPage || lastPage.length < LIMIT) {
           return undefined;
         }
-        // Calculate the next cursor (offset) based on total pages fetched
         const nextCursor = allPages.length * LIMIT;
-        console.log("Next page cursor:", nextCursor);
         return nextCursor;
       },
       initialCursor: 0,
@@ -89,6 +93,7 @@ export function InfiniteVideoGrid({
     );
   }
 
+  // biome-ignore lint/complexity/noFlatMapIdentity: idk why biome is complaining about this
   const allVideos = data?.pages.flatMap((page) => page) ?? [];
 
   if (allVideos.length === 0) {
@@ -103,12 +108,7 @@ export function InfiniteVideoGrid({
     <div className="space-y-6">
       <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
         {allVideos.map((video) => (
-          <VideoCard
-            key={video.id}
-            previewVideoUrl={video.transcode?.hoverPreviewWebm}
-            thumbnail25pctUrl={video.transcode?.thumbnail25pct}
-            {...video}
-          />
+          <VideoCard key={video.id} {...video} />
         ))}
       </div>
 

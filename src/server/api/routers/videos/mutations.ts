@@ -8,6 +8,10 @@ import { env } from "~/env";
 import { db, eq } from "~/server/db";
 import * as schema from "~/server/db/schema";
 import { createVideoId } from "~/server/db/schema/videos";
+import {
+  deleteVideoFromTypesense,
+  upsertVideoToTypesense,
+} from "~/server/typesense/utils/upsert-video";
 import { createTRPCRouter, protectedProcedure } from "../../trpc";
 
 /**
@@ -85,7 +89,6 @@ export const videoMutationsRouter = createTRPCRouter({
         originalKey: key,
         originalThumbnailKey: thumbnailKey ?? null,
         creatorId: input.creatorId ?? null,
-        status: "uploaded",
       });
 
       // Add featured creators if provided
@@ -148,6 +151,8 @@ export const videoMutationsRouter = createTRPCRouter({
         outputPrefix: `videos/${videoId}`,
         status: "queued",
       });
+
+      upsertVideoToTypesense(videoId).catch(console.error);
 
       return {
         videoId,
@@ -231,6 +236,7 @@ export const videoMutationsRouter = createTRPCRouter({
         }
       }
 
+      upsertVideoToTypesense(input.videoId).catch(console.error);
       return { success: true };
     }),
 
@@ -273,6 +279,8 @@ export const videoMutationsRouter = createTRPCRouter({
         .update(schema.video)
         .set({ deletedAt: new Date() })
         .where(eq(schema.video.id, input.videoId));
+
+      deleteVideoFromTypesense(input.videoId).catch(console.error);
 
       return { success: true };
     }),

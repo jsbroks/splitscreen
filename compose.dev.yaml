@@ -21,18 +21,12 @@ services:
     image: typesense/typesense:0.25.2
     restart: unless-stopped
     environment:
-      TYPESENSE_API_KEY: xyz # Change for production!
+      TYPESENSE_API_KEY: secret
       TYPESENSE_DATA_DIR: /data
     ports:
       - "8108:8108"
     volumes:
       - typesense_data:/data
-    command: "--data-dir /data --api-key xyz --listen-port 8108"
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8108/health"]
-      interval: 5s
-      timeout: 3s
-      retries: 12
 
   minio:
     image: minio/minio:latest
@@ -70,3 +64,4 @@ services:
 volumes:
   pgdata:
   minio_data:
+  typesense_data:

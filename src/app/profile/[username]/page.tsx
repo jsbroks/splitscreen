@@ -1,4 +1,4 @@
-import { desc, eq } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { notFound } from "next/navigation";
 import { VideoCard } from "~/app/_components/VideoCard";
 import { FollowButton } from "~/components/FollowButton";
@@ -17,22 +17,18 @@ export default async function ProfilePage({
 
   const user = await db.query.user.findFirst({
     where: eq(schema.user.username, username),
-    with: {
-      uploadedVideos: {
-        orderBy: desc(schema.video.createdAt),
-        limit: 24,
-      },
-    },
   });
 
   if (!user) {
     notFound();
   }
 
-  const videos = await api.videos.videos({
+  const videos = await api.videos.search({
     uploadedById: user.id,
     limit: 24,
+    sortBy: { field: "created_at", direction: "desc" },
   });
+
   const displayName = user.displayUsername ?? user.name ?? user.username;
 
   const session = await getSession();
@@ -103,12 +99,7 @@ export default async function ProfilePage({
           ) : (
             <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-4">
               {videos.map((v) => (
-                <VideoCard
-                  key={v.id}
-                  previewVideoUrl={v.transcode?.hoverPreviewWebm}
-                  thumbnail25pctUrl={v.transcode?.thumbnail25pct}
-                  {...v}
-                />
+                <VideoCard key={v.id} {...v} />
               ))}
             </div>
           )}

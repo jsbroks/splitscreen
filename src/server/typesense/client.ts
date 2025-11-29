@@ -9,6 +9,7 @@ export const typesense = new Client({
       protocol: "http",
     },
   ],
+
   apiKey: env.TYPESENSE_API_KEY ?? "secret",
-  connectionTimeoutSeconds: 2,
+  connectionTimeoutSeconds: 30, // Increased for collection operations
 });

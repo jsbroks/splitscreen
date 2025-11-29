@@ -16,8 +16,9 @@ import { VideoCard } from "~/app/_components/VideoCard";
 import { Avatar, AvatarFallback, AvatarImage } from "~/components/ui/avatar";
 import { buttonVariants } from "~/components/ui/button";
 import { cn } from "~/lib/utils";
-import { db, desc, eq } from "~/server/db";
+import { db, eq } from "~/server/db";
 import * as schema from "~/server/db/schema";
+import { api } from "~/trpc/server";
 
 export default async function CreatorPage({
   params,
@@ -54,13 +55,11 @@ export default async function CreatorPage({
       })()
     : null;
 
-  const videos = await db
-    .select()
-    .from(schema.video)
-    .where(eq(schema.video.creatorId, creator.id))
-    .innerJoin(schema.user, eq(schema.video.uploadedById, schema.user.id))
-    .orderBy(desc(schema.video.createdAt))
-    .limit(24);
+  const videos = await api.videos.search({
+    creatorId: creator.id,
+    limit: 24,
+    sortBy: { field: "created_at", direction: "desc" },
+  });
 
   return (
     <main>
@@ -106,8 +105,8 @@ export default async function CreatorPage({
             <p className="text-muted-foreground">No videos yet.</p>
           ) : (
             <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
-              {videos.map(({ video }) => (
-                <VideoCard key={video.id} {...video} views={0} />
+              {videos.map((video) => (
+                <VideoCard key={video.id} {...video} />
               ))}
             </div>
           )}

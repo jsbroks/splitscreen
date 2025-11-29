@@ -3,6 +3,7 @@ import { nanoid } from "nanoid";
 import { z } from "zod";
 import { asc, db, eq } from "~/server/db";
 import * as schema from "~/server/db/schema";
+import { upsertVideoToTypesense } from "~/server/typesense/utils";
 import {
   createTRPCRouter,
   protectedProcedure,
@@ -50,6 +51,8 @@ export const videoModerationRouter = createTRPCRouter({
         .set({ status: "approved" })
         .where(eq(schema.video.id, input.videoId));
 
+      await upsertVideoToTypesense(input.videoId).catch(console.error);
+
       return { success: true };
     }),
 
@@ -93,6 +96,8 @@ export const videoModerationRouter = createTRPCRouter({
           rejectionMessage: input.message ?? null,
         })
         .where(eq(schema.video.id, input.videoId));
+
+      await upsertVideoToTypesense(input.videoId).catch(console.error);
 
       return { success: true };
     }),
@@ -152,6 +157,8 @@ export const videoModerationRouter = createTRPCRouter({
         fullName: input.fullName,
         email: input.email,
       });
+
+      await upsertVideoToTypesense(input.videoId).catch(console.error);
 
       return { success: true };
     }),

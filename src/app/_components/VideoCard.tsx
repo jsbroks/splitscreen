@@ -5,34 +5,23 @@ import { Eye } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRef, useState } from "react";
+import type { EnrichedVideo } from "~/server/typesense/utils";
 
-type VideoCardProps = {
-  id: string;
-  title: string;
-  views: number;
-  status?:
-    | "uploaded"
-    | "processing"
-    | "in_review"
-    | "approved"
-    | "rejected"
-    | "failed";
-  previewVideoUrl?: string | null;
-  thumbnailUrl?: string | null;
-  thumbnail25pctUrl?: string | null;
-};
+type VCProps = EnrichedVideo;
 
-export const VideoCard: React.FC<VideoCardProps> = ({
+export const VideoCard: React.FC<VCProps> = ({
   id,
   title,
   views,
-  previewVideoUrl,
-  thumbnail25pctUrl,
+  transcode,
+  uploadedBy,
   thumbnailUrl,
 }) => {
   const [isHovering, setIsHovering] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
 
+  const previewVideoUrl = transcode?.hoverPreviewWebm;
+  const thumbnail25pctUrl = transcode?.thumbnail25pct;
   const formattedViews = new Intl.NumberFormat("en", {
     notation: "compact",
   }).format(views);
@@ -57,6 +46,8 @@ export const VideoCard: React.FC<VideoCardProps> = ({
     }
   };
 
+  const uploadedByUsername =
+    uploadedBy?.displayUsername ?? uploadedBy?.username;
   return (
     <Link
       className="group col-span-1"
@@ -93,7 +84,7 @@ export const VideoCard: React.FC<VideoCardProps> = ({
 
       <h2 className="transition-colors group-hover:text-primary">{title}</h2>
       <div className="flex items-center justify-between gap-2">
-        <p className="text-muted-foreground text-xs">kesppa</p>
+        <p className="text-muted-foreground text-xs">{uploadedByUsername}</p>
 
         <p className="flex items-center justify-between gap-1 text-muted-foreground text-xs">
           <Eye className="size-2" />

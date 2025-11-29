@@ -18,12 +18,9 @@ import { transcodeQueue } from "./queue";
 export const createVideoId = () => nanoid(8);
 
 export const videoStatusEnum = pgEnum("video_status", [
-  "uploaded",
-  "processing",
   "in_review",
   "approved",
   "rejected",
-  "failed",
 ]);
 
 export const assetTypeEnum = pgEnum("asset_type", [
@@ -44,7 +41,8 @@ export const video = pgTable("video", {
   originalKey: text("original_key").notNull(), // e.g. originals/<videoId>/upload.mp4
   originalThumbnailKey: text("original_thumbnail_key"), // e.g. originals/<videoId>/thumbnail.jpg
 
-  status: videoStatusEnum("status").notNull().default("uploaded"),
+  draft: boolean("draft").default(true),
+  status: videoStatusEnum("status").notNull().default("in_review"),
   rejectionMessage: text("rejection_message"), // message explaining why video was rejected
 
   // Optional metadata

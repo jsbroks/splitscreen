@@ -6,6 +6,7 @@ import {
   CardHeader,
   CardTitle,
 } from "~/components/ui/card";
+import { TypesenseSync } from "./_components/TypesenseSync";
 
 export default async function AdminPage() {
   return (
@@ -50,6 +51,8 @@ export default async function AdminPage() {
               </Button>
             </CardHeader>
           </Card>
+
+          <TypesenseSync />
         </div>
       </div>
     </main>
