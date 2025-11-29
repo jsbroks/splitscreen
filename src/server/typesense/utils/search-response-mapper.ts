@@ -95,6 +95,15 @@ export async function mapSearchResultsToVideos(
   });
 
   // Get view counts for all videos
+  // Total = denormalized count (archived/compressed views) + current views in table
+  const viewCountMap = new Map<string, number>();
+
+  // First, initialize with denormalized counts (or 0)
+  for (const video of videos) {
+    viewCountMap.set(video.id, video.viewCount ?? 0);
+  }
+
+  // Then add current counts from videoView table
   const viewCounts = await db
     .select({
       videoId: schema.videoView.videoId,
@@ -104,7 +113,10 @@ export async function mapSearchResultsToVideos(
     .where(inArray(schema.videoView.videoId, videoIds))
     .groupBy(schema.videoView.videoId);
 
-  const viewCountMap = new Map(viewCounts.map((v) => [v.videoId, v.count]));
+  for (const vc of viewCounts) {
+    const baseCount = viewCountMap.get(vc.videoId) ?? 0;
+    viewCountMap.set(vc.videoId, baseCount + vc.count);
+  }
 
   // Create a map for quick lookup
   const videoMap = new Map(videos.map((v) => [v.id, v]));

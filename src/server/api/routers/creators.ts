@@ -68,6 +68,26 @@ export const creatorsRouter = createTRPCRouter({
     });
   }),
 
+  infiniteList: publicProcedure
+    .input(
+      z.object({
+        limit: z.number().min(1).max(100).default(20),
+        cursor: z.number().default(0),
+      }),
+    )
+    .query(async ({ ctx, input }) => {
+      const creators = await ctx.db.query.creator.findMany({
+        with: {
+          links: true,
+        },
+        orderBy: (creators, { asc }) => [asc(creators.displayName)],
+        limit: input.limit,
+        offset: input.cursor,
+      });
+
+      return creators;
+    }),
+
   getByUsername: publicProcedure
     .input(z.object({ username: z.string() }))
     .query(async ({ ctx, input }) => {

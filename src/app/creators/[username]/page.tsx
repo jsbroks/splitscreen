@@ -10,15 +10,90 @@ import {
   SiYoutube,
 } from "@icons-pack/react-simple-icons";
 import { Link2 } from "lucide-react";
+import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { VideoCard } from "~/app/_components/VideoCard";
 import { Avatar, AvatarFallback, AvatarImage } from "~/components/ui/avatar";
 import { buttonVariants } from "~/components/ui/button";
 import { cn } from "~/lib/utils";
 import { db, eq } from "~/server/db";
 import * as schema from "~/server/db/schema";
-import { api } from "~/trpc/server";
+import { CreatorVideos } from "./_components/CreatorVideos";
+
+const SITE_NAME = "SplitScreen";
+const SITE_URL = process.env.NEXT_PUBLIC_APP_URL;
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ username: string }>;
+}): Promise<Metadata> {
+  const { username } = await params;
+
+  const creator = await db.query.creator.findFirst({
+    where: eq(schema.creator.username, username),
+  });
+
+  if (!creator) {
+    return {
+      title: "Creator not found",
+      robots: { index: false, follow: false },
+    };
+  }
+
+  const title = `${creator.displayName} (@${creator.username})`;
+  const description =
+    creator.aliases.length > 0
+      ? `View all videos featuring ${creator.displayName}. Also known as: ${creator.aliases.join(", ")}.`
+      : `View all videos featuring ${creator.displayName}.`;
+
+  return {
+    title,
+    description,
+    keywords: [
+      creator.displayName,
+      creator.username,
+      ...creator.aliases,
+      "creator",
+      "videos",
+      "splitscreen",
+    ],
+    openGraph: {
+      type: "profile",
+      locale: "en_US",
+      url: `${SITE_URL}/creators/${creator.username}`,
+      siteName: SITE_NAME,
+      title: `${title} | ${SITE_NAME}`,
+      description,
+      images: creator.image
+        ? [
+            {
+              url: creator.image,
+              width: 400,
+              height: 400,
+              alt: creator.displayName,
+            },
+          ]
+        : [
+            {
+              url: `${SITE_URL}/og-image.png`,
+              width: 1200,
+              height: 630,
+              alt: `${SITE_NAME} - ${creator.displayName}`,
+            },
+          ],
+    },
+    twitter: {
+      card: "summary",
+      title: `${title} | ${SITE_NAME}`,
+      description,
+      images: creator.image ? [creator.image] : [`${SITE_URL}/og-image.png`],
+    },
+    alternates: {
+      canonical: `${SITE_URL}/creators/${creator.username}`,
+    },
+  };
+}
 
 export default async function CreatorPage({
   params,
@@ -55,17 +130,11 @@ export default async function CreatorPage({
       })()
     : null;
 
-  const videos = await api.videos.search({
-    creatorId: creator.id,
-    limit: 24,
-    sortBy: { field: "created_at", direction: "desc" },
-  });
-
   return (
     <main>
       <div className="container mx-auto max-w-7xl space-y-10 px-6 py-12">
         <div className="flex items-center gap-6">
-          <Avatar className="size-32">
+          <Avatar className="size-48">
             <AvatarImage src={creator.image ?? undefined} />
             <AvatarFallback>{creator.displayName.slice(0, 2)}</AvatarFallback>
           </Avatar>
@@ -99,18 +168,7 @@ export default async function CreatorPage({
           </div>
         </div>
 
-        <section className="space-y-3">
-          <h2 className="font-semibold text-xl">Videos</h2>
-          {videos.length === 0 ? (
-            <p className="text-muted-foreground">No videos yet.</p>
-          ) : (
-            <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
-              {videos.map((video) => (
-                <VideoCard key={video.id} {...video} />
-              ))}
-            </div>
-          )}
-        </section>
+        <CreatorVideos creatorId={creator.id} />
       </div>
     </main>
   );

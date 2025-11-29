@@ -15,11 +15,12 @@ interface InfiniteVideoGridProps {
     direction: "asc" | "desc";
   };
   timePeriod?: "all-time" | "this-week" | "this-month" | "this-year";
+  tagIds?: string[];
 }
 
 const LIMIT = 24;
 
-export function InfiniteVideoGrid({ sortBy }: InfiniteVideoGridProps) {
+export function InfiniteVideoGrid({ sortBy, tagIds }: InfiniteVideoGridProps) {
   const {
     data,
     fetchNextPage,
@@ -31,6 +32,7 @@ export function InfiniteVideoGrid({ sortBy }: InfiniteVideoGridProps) {
     {
       limit: LIMIT,
       sortBy: sortBy ?? { field: "created_at", direction: "desc" },
+      tagIds,
     },
     {
       getNextPageParam: (lastPage, allPages) => {

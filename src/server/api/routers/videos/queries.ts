@@ -309,11 +309,15 @@ export const videoQueriesRouter = createTRPCRouter({
         return null;
       }
 
+      // Total views = denormalized count (archived/compressed views) + current views in table
+      const baseViewCount = video.viewCount ?? 0;
       const views = await ctx.db
         .select({ count: count() })
         .from(schema.videoView)
         .where(eq(schema.videoView.videoId, input.videoId))
         .then(takeFirst);
+      const currentViewCount = views?.count ?? 0;
+      const totalViews = baseViewCount + currentViewCount;
 
       const transcode = video?.transcodeQueue[0];
       const urls = buildVideoUrls(video, transcode);
@@ -329,7 +333,7 @@ export const videoQueriesRouter = createTRPCRouter({
           hoverPreviewWebm: urls.hoverPreviewWebm,
           thumbnailsVtt: urls.thumbnailsVtt,
         },
-        views: views?.count ?? 0,
+        views: totalViews,
       };
     }),
 });

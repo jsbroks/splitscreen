@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
-import Link from "next/link";
-import { api } from "~/trpc/server";
+import { InfiniteCreatorGrid } from "./_components/InfiniteCreatorGrid";
 
 const SITE_NAME = "SplitScreen";
 const SITE_DESCRIPTION =
@@ -47,8 +46,6 @@ export const metadata: Metadata = {
 };
 
 export default async function CreatorsPage() {
-  const creators = await api.creators.list();
-
   const structuredData = {
     "@context": "https://schema.org",
     "@type": "CollectionPage",
@@ -71,74 +68,11 @@ export default async function CreatorsPage() {
               All Creators
             </h1>
             <p className="text-muted-foreground">
-              Browse {creators.length} content creator
-              {creators.length !== 1 ? "s" : ""} on SplitScreen
+              Browse content creators on SplitScreen
             </p>
           </div>
 
-          {creators.length === 0 ? (
-            <div className="flex min-h-[400px] items-center justify-center">
-              <p className="text-muted-foreground">No creators found</p>
-            </div>
-          ) : (
-            <div className="grid grid-cols-2 gap-6 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
-              {creators.map((creator) => {
-                // Calculate age from birthday
-                const age = creator.birthday
-                  ? (() => {
-                      const today = new Date();
-                      const birthDate = new Date(creator.birthday);
-                      let calculatedAge =
-                        today.getFullYear() - birthDate.getFullYear();
-                      const monthDiff = today.getMonth() - birthDate.getMonth();
-                      if (
-                        monthDiff < 0 ||
-                        (monthDiff === 0 &&
-                          today.getDate() < birthDate.getDate())
-                      ) {
-                        calculatedAge--;
-                      }
-                      return calculatedAge;
-                    })()
-                  : null;
-
-                return (
-                  <Link
-                    className="group"
-                    href={`/creator/${creator.username}`}
-                    key={creator.id}
-                  >
-                    <div className="relative h-64 overflow-hidden rounded-lg border transition-all hover:shadow-lg">
-                      {/* Background Image */}
-                      <div
-                        className="absolute inset-0 bg-center bg-cover transition-transform duration-300 group-hover:scale-110"
-                        style={{
-                          backgroundImage: creator.image
-                            ? `url(${creator.image})`
-                            : "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
-                        }}
-                      >
-                        {/* Dark overlay gradient */}
-                        <div className="absolute inset-0 bg-linear-to-t from-black/80 via-black/40 to-transparent" />
-                      </div>
-
-                      {/* Content Banner */}
-                      <div className="absolute inset-x-0 bottom-0 p-4">
-                        <div className="space-y-1">
-                          <h3 className="line-clamp-1 font-bold text-lg text-white">
-                            {creator.displayName}
-                          </h3>
-                          <div className="text-xs">
-                            <span>{age} years old</span>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </Link>
-                );
-              })}
-            </div>
-          )}
+          <InfiniteCreatorGrid />
         </div>
       </main>
     </>

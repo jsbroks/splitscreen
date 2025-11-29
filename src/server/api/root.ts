@@ -1,4 +1,5 @@
 import { createCallerFactory, createTRPCRouter } from "~/server/api/trpc";
+import { adminRouter } from "./routers/admin";
 import { creatorsRouter } from "./routers/creators";
 import { tagsRouter } from "./routers/tags";
 import { typesenseRouter } from "./routers/typesense";
@@ -16,6 +17,7 @@ export const appRouter = createTRPCRouter({
   tags: tagsRouter,
   users: usersRouter,
   typesense: typesenseRouter,
+  admin: adminRouter,
 });
 
 // export type definition of API

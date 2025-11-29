@@ -19,6 +19,7 @@ import {
   navigationMenuTriggerStyle,
 } from "~/components/ui/navigation-menu";
 import { AuthDialog } from "./AuthDialog";
+import { LogoutButton } from "./LogoutButton";
 import { SearchBar } from "./SearchBar";
 
 export function Navbar({
@@ -84,13 +85,11 @@ export function Navbar({
                     </Avatar>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
-                    <DropdownMenuItem>
-                      <Link href={`/user/${user.id}`}>Profile</Link>
+                    <DropdownMenuItem asChild>
+                      <Link href={`/profile/${user.username}`}>Profile</Link>
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
-                    <DropdownMenuItem>
-                      <Link href="/logout">Logout</Link>
-                    </DropdownMenuItem>
+                    <LogoutButton />
                   </DropdownMenuContent>
                 </DropdownMenu>
               </>

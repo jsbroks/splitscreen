@@ -75,11 +75,14 @@ export async function upsertVideoToTypesense(
   }
 
   // Get total view count
+  // Total = denormalized count (archived/compressed views) + current views in table
+  const baseViewCount = video.viewCount ?? 0;
   const viewCountResult = await db
     .select({ count: count() })
     .from(schema.videoView)
     .where(eq(schema.videoView.videoId, videoId));
-  const viewCount = viewCountResult[0]?.count ?? 0;
+  const currentViewCount = viewCountResult[0]?.count ?? 0;
+  const viewCount = baseViewCount + currentViewCount;
 
   // Get like/dislike counts
   const likeCountResult = await db

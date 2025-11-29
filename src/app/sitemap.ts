@@ -1,5 +1,5 @@
 import type { MetadataRoute } from "next";
-import { db, desc, eq } from "~/server/db";
+import { db } from "~/server/db";
 import * as schema from "~/server/db/schema";
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
@@ -58,24 +58,6 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     },
   ];
 
-  // Get all approved videos
-  const videos = await db
-    .select({
-      id: schema.video.id,
-      updatedAt: schema.video.updatedAt,
-    })
-    .from(schema.video)
-    .where(eq(schema.video.status, "approved"))
-    .orderBy(desc(schema.video.createdAt))
-    .limit(5000); // Limit to prevent extremely large sitemaps
-
-  const videoRoutes: MetadataRoute.Sitemap = videos.map((video) => ({
-    url: `${baseUrl}/video/${video.id}`,
-    lastModified: video.updatedAt,
-    changeFrequency: "weekly" as const,
-    priority: 0.6,
-  }));
-
   // Get all creators
   const creators = await db
     .select({
@@ -85,11 +67,11 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     .limit(1000); // Limit to prevent extremely large sitemaps
 
   const creatorRoutes: MetadataRoute.Sitemap = creators.map((creator) => ({
-    url: `${baseUrl}/creator/${creator.username}`,
+    url: `${baseUrl}/creators/${creator.username}`,
     lastModified: new Date(),
     changeFrequency: "weekly" as const,
     priority: 0.5,
   }));
 
-  return [...staticRoutes, ...videoRoutes, ...creatorRoutes];
+  return [...staticRoutes, ...creatorRoutes];
 }

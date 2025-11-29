@@ -59,7 +59,7 @@ export default function NewCreatorPage() {
   const createCreator = api.creators.create.useMutation({
     onSuccess: (data) => {
       toast.success("Creator created successfully!");
-      router.push(`/creator/${data?.username}`);
+      router.push(`/creators/${data?.username}`);
     },
     onError: (error) => {
       toast.error(error.message);

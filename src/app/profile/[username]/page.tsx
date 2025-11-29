@@ -1,12 +1,90 @@
 import { eq } from "drizzle-orm";
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { VideoCard } from "~/app/_components/VideoCard";
 import { FollowButton } from "~/components/FollowButton";
 import { Avatar, AvatarFallback, AvatarImage } from "~/components/ui/avatar";
 import { getSession } from "~/server/better-auth/server";
 import { db } from "~/server/db";
 import * as schema from "~/server/db/schema";
 import { api } from "~/trpc/server";
+import { ProfileVideos } from "./_components/ProfileVideos";
+
+const SITE_NAME = "SplitScreen";
+const SITE_URL = process.env.NEXT_PUBLIC_APP_URL;
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ username: string }>;
+}): Promise<Metadata> {
+  const { username } = await params;
+
+  const user = await db.query.user.findFirst({
+    where: eq(schema.user.username, username),
+  });
+
+  if (!user) {
+    return {
+      title: "Profile not found",
+      robots: { index: false, follow: false },
+    };
+  }
+
+  const displayName =
+    user.displayUsername ?? user.name ?? user.username ?? "User";
+  const title = `${displayName} (@${user.username})`;
+  const description = `View ${displayName}'s profile and uploaded videos on ${SITE_NAME}.`;
+
+  return {
+    title,
+    description,
+    keywords: [
+      displayName,
+      user.username ?? "user",
+      "profile",
+      "user",
+      "videos",
+    ].filter(Boolean),
+    openGraph: {
+      type: "profile",
+      locale: "en_US",
+      url: `${SITE_URL}/profile/${user.username}`,
+      siteName: SITE_NAME,
+      title: `${title} | ${SITE_NAME}`,
+      description,
+      images: user.image
+        ? [
+            {
+              url: user.image,
+              width: 400,
+              height: 400,
+              alt: displayName ?? "",
+            },
+          ]
+        : [
+            {
+              url: `${SITE_URL}/og-image.png`,
+              width: 1200,
+              height: 630,
+              alt: `${SITE_NAME} - ${displayName}`,
+            },
+          ],
+    },
+    twitter: {
+      card: "summary",
+      title: `${title} | ${SITE_NAME}`,
+      description,
+      images: user.image ? [user.image] : [`${SITE_URL}/og-image.png`],
+    },
+    alternates: {
+      canonical: `${SITE_URL}/profile/${user.username}`,
+    },
+    robots: {
+      index: true,
+      follow: true,
+    },
+  };
+}
 
 export default async function ProfilePage({
   params,
@@ -22,12 +100,6 @@ export default async function ProfilePage({
   if (!user) {
     notFound();
   }
-
-  const videos = await api.videos.search({
-    uploadedById: user.id,
-    limit: 24,
-    sortBy: { field: "created_at", direction: "desc" },
-  });
 
   const displayName = user.displayUsername ?? user.name ?? user.username;
 
@@ -62,16 +134,6 @@ export default async function ProfilePage({
                   <span className="font-semibold">
                     {new Intl.NumberFormat("en", {
                       notation: "compact",
-                    }).format(videos.length)}
-                  </span>{" "}
-                  <span className="text-muted-foreground">
-                    video{videos.length !== 1 ? "s" : ""}
-                  </span>
-                </div>
-                <div>
-                  <span className="font-semibold">
-                    {new Intl.NumberFormat("en", {
-                      notation: "compact",
                     }).format(followStats.followers)}
                   </span>{" "}
                   <span className="text-muted-foreground">
@@ -92,18 +154,7 @@ export default async function ProfilePage({
           {!isOwnProfile && <FollowButton userId={user.id} />}
         </div>
 
-        <section className="space-y-3">
-          <h2 className="font-semibold text-xl">Videos</h2>
-          {videos.length === 0 ? (
-            <p className="text-muted-foreground">No videos yet.</p>
-          ) : (
-            <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-4">
-              {videos.map((v) => (
-                <VideoCard key={v.id} {...v} />
-              ))}
-            </div>
-          )}
-        </section>
+        <ProfileVideos userId={user.id} />
       </div>
     </main>
   );

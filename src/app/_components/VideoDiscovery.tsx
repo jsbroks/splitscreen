@@ -1,7 +1,12 @@
 "use client";
 
 import { Calendar, SortAsc } from "lucide-react";
-import { useState } from "react";
+import {
+  parseAsArrayOf,
+  parseAsString,
+  parseAsStringEnum,
+  useQueryState,
+} from "nuqs";
 
 import {
   Select,
@@ -13,34 +18,62 @@ import {
 import { CategoriesCarousel } from "./CategoriesCarousel";
 import { InfiniteVideoGrid } from "./InfiniteVideoGrid";
 
-type TimePeriod = "all-time" | "this-week" | "this-month" | "this-year";
-type SortOption = "newest" | "most-views" | "top-rated" | "longest";
+enum TimePeriod {
+  ALL_TIME = "all-time",
+  THIS_WEEK = "this-week",
+  THIS_MONTH = "this-month",
+  THIS_YEAR = "this-year",
+}
 
-export function VideoDiscovery() {
-  const [timePeriod, setTimePeriod] = useState<TimePeriod>("all-time");
-  const [sortOption, setSortOption] = useState<SortOption>("newest");
+enum SortOption {
+  NEWEST = "newest",
+  MOST_VIEWS = "most-views",
+  TOP_RATED = "top-rated",
+  LONGEST = "longest",
+}
 
-  // Map UI sort options to API sort parameters
-  const getSortBy = (option: SortOption) => {
-    switch (option) {
-      case "newest":
-        return { field: "created_at" as const, direction: "desc" as const };
-      case "most-views":
-        return { field: "view_count" as const, direction: "desc" as const };
-      case "top-rated":
-        return {
-          field: "popularity_score" as const,
-          direction: "desc" as const,
-        };
-      case "longest":
-        return {
-          field: "duration_seconds" as const,
-          direction: "desc" as const,
-        };
-      default:
-        return { field: "created_at" as const, direction: "desc" as const };
-    }
-  };
+type VideoDiscoveryProps = {
+  tags: { id: string; name: string; slug: string }[];
+};
+
+// Map UI sort options to API sort parameters
+const getSortBy = (option: SortOption) => {
+  switch (option) {
+    case "newest":
+      return { field: "created_at" as const, direction: "desc" as const };
+    case "most-views":
+      return { field: "view_count" as const, direction: "desc" as const };
+    case "top-rated":
+      return {
+        field: "popularity_score" as const,
+        direction: "desc" as const,
+      };
+    case "longest":
+      return {
+        field: "duration_seconds" as const,
+        direction: "desc" as const,
+      };
+    default:
+      return { field: "created_at" as const, direction: "desc" as const };
+  }
+};
+
+export function VideoDiscovery({ tags }: VideoDiscoveryProps) {
+  const [timePeriod, setTimePeriod] = useQueryState(
+    "period",
+    parseAsStringEnum(Object.values(TimePeriod)).withDefault(
+      TimePeriod.ALL_TIME,
+    ),
+  );
+
+  const [sortOption, setSortOption] = useQueryState(
+    "sort",
+    parseAsStringEnum(Object.values(SortOption)).withDefault(SortOption.NEWEST),
+  );
+  const [tagIds, setTagIds] = useQueryState(
+    "tags",
+    parseAsArrayOf(parseAsString).withDefault([]),
+  );
 
   return (
     <div className="container mx-auto max-w-7xl space-y-3 px-6 py-12">
@@ -77,10 +110,21 @@ export function VideoDiscovery() {
           </SelectContent>
         </Select>
       </div>
-      <CategoriesCarousel />
+
+      <CategoriesCarousel
+        onTagSelect={(tagId) => {
+          const tags = tagIds.includes(tagId)
+            ? tagIds.filter((id) => id !== tagId)
+            : [...tagIds, tagId];
+          setTagIds(tags);
+        }}
+        selectedTagIds={tagIds}
+        tags={tags}
+      />
 
       <InfiniteVideoGrid
         sortBy={getSortBy(sortOption)}
+        tagIds={tagIds}
         // timePeriod={timePeriod} // TODO: Implement time-based filtering in backend
       />
     </div>

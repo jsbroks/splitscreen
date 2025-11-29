@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { Button } from "~/components/ui/button";
 import {
@@ -7,6 +8,15 @@ import {
   CardTitle,
 } from "~/components/ui/card";
 import { TypesenseSync } from "./_components/TypesenseSync";
+
+export const metadata: Metadata = {
+  title: "Admin Dashboard",
+  description: "Manage content and settings on SplitScreen",
+  robots: {
+    index: false,
+    follow: false,
+  },
+};
 
 export default async function AdminPage() {
   return (

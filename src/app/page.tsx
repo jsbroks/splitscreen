@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
-
+import { count, db, desc, eq } from "~/server/db";
+import * as schema from "~/server/db/schema";
 import { HydrateClient } from "~/trpc/server";
 import { VideoDiscovery } from "./_components/VideoDiscovery";
 
@@ -76,7 +77,7 @@ export const metadata: Metadata = {
   manifest: "/site.webmanifest",
 };
 
-export default function Home() {
+export default async function Home() {
   // Structured data for SEO
   const structuredData = {
     "@context": "https://schema.org",
@@ -94,6 +95,20 @@ export default function Home() {
     },
   };
 
+  // Query to get the 10 most used tags (by number of videos)
+  const topTags = await db
+    .select({
+      id: schema.tag.id,
+      name: schema.tag.name,
+      slug: schema.tag.slug,
+      count: count(schema.videoTag.id),
+    })
+    .from(schema.tag)
+    .leftJoin(schema.videoTag, eq(schema.tag.id, schema.videoTag.tagId))
+    .groupBy(schema.tag.id, schema.tag.name, schema.tag.slug)
+    .orderBy(desc(count(schema.videoTag.id)))
+    .limit(10);
+
   return (
     <HydrateClient>
       <script
@@ -102,7 +117,7 @@ export default function Home() {
         type="application/ld+json"
       />
       <main>
-        <VideoDiscovery />
+        <VideoDiscovery tags={topTags} />
       </main>
     </HydrateClient>
   );

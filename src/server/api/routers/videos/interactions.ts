@@ -1,5 +1,6 @@
 import { TRPCError } from "@trpc/server";
 import { nanoid } from "nanoid";
+import { sql } from "drizzle-orm";
 import { z } from "zod";
 import { and, count, eq, gt, takeFirst, takeFirstOrNull } from "~/server/db";
 import * as schema from "~/server/db/schema";
@@ -50,6 +51,14 @@ export const videoInteractionsRouter = createTRPCRouter({
           fingerprintId: userId ? null : (input.fingerprint ?? null),
         })
         .returning();
+
+      // Increment the denormalized view count
+      await ctx.db
+        .update(schema.video)
+        .set({
+          viewCount: sql`COALESCE(${schema.video.viewCount}, 0) + 1`,
+        })
+        .where(eq(schema.video.id, input.videoId));
 
       return { viewId: result[0]?.id, isNew: true };
     }),

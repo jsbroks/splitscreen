@@ -41,13 +41,15 @@ export const video = pgTable("video", {
   originalKey: text("original_key").notNull(), // e.g. originals/<videoId>/upload.mp4
   originalThumbnailKey: text("original_thumbnail_key"), // e.g. originals/<videoId>/thumbnail.jpg
 
-  draft: boolean("draft").default(true),
   status: videoStatusEnum("status").notNull().default("in_review"),
   rejectionMessage: text("rejection_message"), // message explaining why video was rejected
 
   // Optional metadata
   durationSeconds: integer("duration_seconds"), // set after probe/transcode
   sizeBytes: bigint("size_bytes", { mode: "number" }),
+
+  // Denormalized view count for performance (can be used to archive videoView table)
+  viewCount: integer("view_count").default(0),
 
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at")

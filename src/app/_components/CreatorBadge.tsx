@@ -18,7 +18,7 @@ export function CreatorLink({ creator, className }: CreatorLinkProps) {
         "inline-flex items-center gap-2 rounded-md bg-secondary px-2 py-1 text-xs hover:bg-secondary/80",
         className,
       )}
-      href={`/creator/${creator.username}`}
+      href={`/creators/${creator.username}`}
     >
       {creator.image && (
         <Avatar className="size-4">
