@@ -106,6 +106,13 @@ export const videosV1: CollectionCreateSchema = {
       facet: true,
     },
 
+    {
+      name: "contains_ai_generated_content",
+      type: "bool",
+      optional: true,
+      facet: true,
+    },
+
     // Video metadata (for filtering and sorting)
     { name: "average_watch_duration_seconds", type: "int32", optional: true },
     { name: "duration_seconds", type: "int32", optional: true, facet: true },

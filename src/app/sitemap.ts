@@ -2,6 +2,10 @@ import type { MetadataRoute } from "next";
 import { db } from "~/server/db";
 import * as schema from "~/server/db/schema";
 
+// Force dynamic generation to avoid database connection during build
+export const dynamic = "force-dynamic";
+export const revalidate = 3600; // Revalidate every hour
+
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://splitscreen.com";
 
@@ -58,20 +62,26 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     },
   ];
 
-  // Get all creators
-  const creators = await db
-    .select({
-      username: schema.creator.username,
-    })
-    .from(schema.creator)
-    .limit(1000); // Limit to prevent extremely large sitemaps
+  // Get all creators - with error handling for build time
+  let creatorRoutes: MetadataRoute.Sitemap = [];
+  try {
+    const creators = await db
+      .select({
+        username: schema.creator.username,
+      })
+      .from(schema.creator)
+      .limit(1000); // Limit to prevent extremely large sitemaps
 
-  const creatorRoutes: MetadataRoute.Sitemap = creators.map((creator) => ({
-    url: `${baseUrl}/creators/${creator.username}`,
-    lastModified: new Date(),
-    changeFrequency: "weekly" as const,
-    priority: 0.5,
-  }));
+    creatorRoutes = creators.map((creator) => ({
+      url: `${baseUrl}/creators/${creator.username}`,
+      lastModified: new Date(),
+      changeFrequency: "weekly" as const,
+      priority: 0.5,
+    }));
+  } catch (error) {
+    console.warn("Failed to fetch creators for sitemap:", error);
+    // Return static routes only if database is unavailable
+  }
 
   return [...staticRoutes, ...creatorRoutes];
 }
