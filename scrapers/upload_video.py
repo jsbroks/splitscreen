@@ -237,7 +237,7 @@ class VideoUploader:
             payload["externalReference"] = external_reference
         if created_at:
             # Convert datetime to ISO format string
-            payload["createdAt"] = created_at.isoformat()
+            payload["createdAt"] = created_at
 
         # Prepare headers with API key
         headers = {
@@ -695,16 +695,6 @@ def main():
             print('  - New: {"username":"creator_name","display_name":"Name","role":"performer"}')
             sys.exit(1)
 
-    # Parse created_at if provided
-    created_at = None
-    if created_at_str:
-        try:
-            created_at = datetime.fromisoformat(created_at_str)
-        except ValueError as e:
-            print(f"❌ Error parsing created-at date: {e}")
-            print("Expected ISO format: 2024-01-15T10:30:00")
-            sys.exit(1)
-
     # Initialize uploader
     uploader = VideoUploader(base_url=args.api_url, api_key=api_key)
 
@@ -731,7 +721,7 @@ def main():
             tags=tags,
             view_count=view_count,
             external_reference=external_ref,
-            created_at=created_at,
+            created_at=created_at_str,
         )
 
         print(f"\n✅ Upload successful!")

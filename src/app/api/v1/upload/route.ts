@@ -28,7 +28,7 @@ const videoUploadSchema = z.object({
     )
     .optional(),
   tags: z.array(z.string()).optional(),
-  createdAt: z.date().optional(),
+  createdAt: z.string().optional(),
   viewCount: z.number().int().min(0).optional(),
   externalReference: z.string().optional(),
 });
@@ -140,6 +140,7 @@ async function handleVideoUpload(input: z.infer<typeof videoUploadSchema>) {
     });
   }
 
+  const createdAt = input.createdAt ? new Date(input.createdAt) : new Date();
   // Insert video record in database
   await db.insert(schema.video).values({
     id: videoId,
@@ -148,7 +149,7 @@ async function handleVideoUpload(input: z.infer<typeof videoUploadSchema>) {
     description: input.description ?? null,
     originalKey: key,
     originalThumbnailKey: thumbnailKey ?? null,
-    createdAt: input.createdAt ?? new Date(),
+    createdAt,
     status: "approved",
     viewCount: input.viewCount ?? 0,
     externalReference: input.externalReference ?? null,

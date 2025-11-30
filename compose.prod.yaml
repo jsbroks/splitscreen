@@ -69,7 +69,7 @@ services:
     deploy:
       resources:
         limits:
-          memory: 5g
+          memory: 6g
 
 volumes:
   db_data:
