@@ -62,6 +62,18 @@ export default async function AdminPage() {
             </CardHeader>
           </Card>
 
+          <Card>
+            <CardHeader>
+              <CardTitle>Transcode Jobs</CardTitle>
+              <CardDescription>
+                Monitor and manage video transcoding queue
+              </CardDescription>
+              <Button asChild className="mt-4">
+                <Link href="/admin/transcode-jobs">View Jobs</Link>
+              </Button>
+            </CardHeader>
+          </Card>
+
           <TypesenseSync />
         </div>
       </div>

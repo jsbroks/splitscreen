@@ -25,6 +25,7 @@ services:
       S3_BUCKET: splithaven
       S3_ENDPOINT: https://25844977d6037335b3c892d222f54af2.r2.cloudflarestorage.com
       S3_PUBLIC_URL_BASE: https://media.splithaven.com
+      S3_FORCE_PATH_STYLE: "false"
       S3_ACCESS_KEY_ID: 0d9bf74f7dcd3bf91cbd4c64f47a28b2
       S3_SECRET_ACCESS_KEY: cfb89fdcceb64eb3be6a16faaba936bb3fb3c88aae066bb727f0b6b71ec1d06e
       S3_REGION: auto
@@ -58,13 +59,17 @@ services:
       dockerfile: Dockerfile
     environment:
       DATABASE_URL: postgres://postgres:postgres@db:5432/appdb?sslmode=disable
-
       S3_BUCKET: splithaven
       S3_ENDPOINT: https://25844977d6037335b3c892d222f54af2.r2.cloudflarestorage.com
       S3_PUBLIC_URL_BASE: https://media.splithaven.com
       S3_ACCESS_KEY_ID: 0d9bf74f7dcd3bf91cbd4c64f47a28b2
       S3_SECRET_ACCESS_KEY: cfb89fdcceb64eb3be6a16faaba936bb3fb3c88aae066bb727f0b6b71ec1d06e
       S3_REGION: auto
+      S3_FORCE_PATH_STYLE: "false"
+    deploy:
+      resources:
+        limits:
+          memory: 5g
 
 volumes:
   db_data:

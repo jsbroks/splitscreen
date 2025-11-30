@@ -76,3 +76,27 @@ brooke-monk:
   image: https://www.famousbirthdays.com/faces/monk-brooke-image.jpg
   links:
     - https://www.instagram.com/brookemonk
+
+angela-white:
+  display_name: Angela White
+  birthday: 1984-01-01
+  image: https://pbs.twimg.com/profile_images/1523075322500898818/tN551YqS_400x400.jpg
+  links:
+  - https://www.instagram.com/TheAngelaWhite
+  - https://x.com/ANGELAWHITE
+
+aria-lee:
+  display_name: Aria Lee
+  image: https://pbs.twimg.com/profile_images/1943089121951416320/v02JA1Z2_400x400.jpg
+  links:
+  - https://www.instagram.com/AriaLeeXXX
+  - https://x.com/AriaLeexxx
+
+asyabunny:
+  display_name: Asya Bunny
+  birthday: 2005-01-01
+  image: https://pbs.twimg.com/profile_images/1479812241524498433/BhjthFZR_400x400.jpg
+  links:
+  - https://www.instagram.com/asyabunny__
+  - https://x.com/asyabunnyOF
+  - https://linktr.ee/asyabunny

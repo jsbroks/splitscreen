@@ -6,6 +6,24 @@ url = "https://pmvhaven.com/api/videos/trending?period=1h&limit=50&page=1"
 
 one_week_ago = datetime.datetime.now(datetime.UTC) - datetime.timedelta(weeks=1)
 
+import yaml
+from pathlib import Path
+
+def load_creators_map(yaml_path: str = "videos/star-mapping.yaml") -> dict:
+    import os
+    base_dir = os.path.dirname(__file__)
+    yaml_file = Path(base_dir) / yaml_path
+    if not yaml_file.exists():
+        return {}
+    with open(yaml_file, "r", encoding="utf-8") as f:
+        creators_map = yaml.safe_load(f)
+        return creators_map if creators_map else {}
+
+
+creators_map = load_creators_map()
+
+print(creators_map)
+
 class Video:
     def __init__(self, data: dict):
         self.id: str = data['_id']
@@ -18,6 +36,8 @@ class Video:
         ).replace(tzinfo=datetime.timezone.utc)
     
         self.tags: list[str] = data['tags']
+        self.tags.append("PMV")
+
         self.stars: list[str] = data['starsTags']
         self.uploader: list[str] = data['uploader']
         self.uploader_avatar: str = data['uploaderAvatarUrl']
@@ -86,39 +106,46 @@ def video_tags_stats(video_id: str):
 
     return tags, stars
 
-videos = get_videos(limit=5, page=1, sort=Sort.UPLOAD_DATE.value, from_date=one_week_ago)
-
-print(videos[0].video_url)
-print(videos[0].thumbnail_url)
-
-
 if __name__ == "__main__":
     import json
 
+    videos = get_videos(limit=100, page=1, sort=Sort.VIEWS.value, from_date=one_week_ago)
+
     for idx, video in enumerate(videos):
         # Create a filename based on video id or index
-        json_filename = f"video_{idx}.json"
+        json_filename = f"pmvhaven/videos/video_{idx}.json"
 
-        print(video.data)
+        creators = [
+            {
+                "username": video.uploader_username,
+                "display_name": video.uploader,
+                "image": video.uploader_avatar,
+                "role": "producer"
+            }
+        ]
+        for star in video.stars:
+            creators.append({
+                "username": creators_map.get(star),
+                "raw_creator": star,
+                "role": "performer"
+            })
 
         data = {
-            "title": video.title,
+            "title": video.title.strip(),
             "video": video.video_url,
             "thumbnail": video.thumbnail_url,
+            "created_at": video.upload_date.isoformat(),
 
             "view_count": video.data["views"],
 
             "tags": video.tags,
 
-            "external_reference": f"pmvheaven:{video.id}",
-            "creators": [
-                {
-                    "username": video.uploader_username,
-                    "display_name": video.uploader,
-                    "image": video.uploader_avatar,
-                    "role": "producer"
-                }
-            ],
+            "url": f"https://pmvhaven.com/video/{video.id}",
+
+            "external_reference": f"pmvhaven:{video.id}",
+            "creators": creators,
+
+            "hls": f"https://video.pmvhaven.com/{video.id}/master.m3u8",
         }
 
         # Pretty print to file

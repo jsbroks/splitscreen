@@ -202,11 +202,11 @@ def main(
     
     # Get API URL from argument or environment
     if api_url is None:
-        api_url = os.environ.get("API_URL", "http://localhost:3000")
+        api_url = os.environ.get("API_URL", "https://splithaven.com")
 
     # Get API key from argument or environment
     if api_key is None:
-        api_key = os.environ.get("INTERNAL_API_KEY")
+        api_key = os.environ.get("INTERNAL_API_KEY", "XQkhZPEVXQ0LgJLr")
 
     if not api_key:
         print("Error: API key is required. Set INTERNAL_API_KEY environment variable or pass --api-key", file=sys.stderr)

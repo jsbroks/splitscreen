@@ -324,6 +324,19 @@ class VideoUploader:
             video_file = Path(actual_video_path)
             content_type = self._get_content_type(video_file)
 
+            # Check video file size
+            video_size = video_file.stat().st_size
+            if video_size < 1024:  # Less than 1KB
+                size_bytes = video_size
+                raise ValueError(
+                    f"Video file is too small ({size_bytes} bytes). "
+                    f"Minimum size is 1KB. File may be corrupted or incomplete."
+                )
+            
+            # Log file size for debugging
+            video_size_mb = video_size / (1024 * 1024)
+            print(f"Video file size: {video_size_mb:.2f} MB")
+
             # Handle thumbnail path (local file or URL)
             thumbnail_filename = None
             thumbnail_content_type = None
@@ -343,6 +356,12 @@ class VideoUploader:
                         raise FileNotFoundError(f"Thumbnail file not found: {thumbnail_path}")
                 
                 thumb_file = Path(actual_thumbnail_path)
+                
+                # Check thumbnail file size
+                thumb_size = thumb_file.stat().st_size
+                if thumb_size < 100:  # Less than 100 bytes
+                    print(f"⚠️  Warning: Thumbnail is very small ({thumb_size} bytes), may be corrupted")
+                
                 thumbnail_filename = thumb_file.name
                 thumbnail_content_type = self._get_content_type(thumb_file)
 
