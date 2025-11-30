@@ -11,15 +11,20 @@ class Video:
         self.id: str = data['_id']
         self.data = data
         self.title: str = data['title']
-        self.description: str = data['description']
+
         # Parse ISO 8601 date string (e.g. "2025-11-29T05:33:19.680Z") to datetime object
-        self.uploadDate = datetime.datetime.strptime(
+        self.upload_date = datetime.datetime.strptime(
             data['uploadDate'], "%Y-%m-%dT%H:%M:%S.%fZ"
         ).replace(tzinfo=datetime.timezone.utc)
     
         self.tags: list[str] = data['tags']
         self.stars: list[str] = data['starsTags']
         self.uploader: list[str] = data['uploader']
+        self.uploader_avatar: str = data['uploaderAvatarUrl']
+        self.uploader_username: str = data['uploaderUsername']
+
+        self.video_url: str = data['videoUrl']
+        self.thumbnail_url: str = data['thumbnailUrl']
 
     def download_video(self, dest_path: str):
         """
@@ -28,10 +33,9 @@ class Video:
         Args:
             dest_path (str): Path where the video should be saved.
         """
-        video_url = self.data.get('videoUrl')
-        if not video_url:
+        if not self.video_url:
             raise ValueError("No video URL found in video data.")
-        response = requests.get(video_url, stream=True)
+        response = requests.get(self.video_url, stream=True)
         response.raise_for_status()
         with open(dest_path, "wb") as f:
             for chunk in response.iter_content(chunk_size=8192):
@@ -46,11 +50,10 @@ class Video:
         Args:
             dest_path (str): Path where the thumbnail image should be saved.
         """
-        thumbnail_url = self.data.get('thumbnailUrl')
-        if not thumbnail_url:
+        if not self.thumbnail_url:
             raise ValueError("No thumbnail URL found in video data.")
 
-        response = requests.get(thumbnail_url, stream=True)
+        response = requests.get(self.thumbnail_url, stream=True)
         response.raise_for_status()
 
         with open(dest_path, "wb") as f:
@@ -73,13 +76,6 @@ def get_videos(limit: int = 50, page: int = 1, sort: str = "", from_date: dateti
     return [Video(video) for video in data["data"]]
 
 
-def pprint_json(data):
-    """Pretty print a Python object as JSON."""
-    import json
-    print(json.dumps(data, indent=2, ensure_ascii=False))
-    
-
-
 def video_tags_stats(video_id: str):
     url = f"https://pmvhaven.com/api/videos/{video_id}/tags/stats"
     response = requests.get(url)
@@ -91,6 +87,42 @@ def video_tags_stats(video_id: str):
     return tags, stars
 
 videos = get_videos(limit=5, page=1, sort=Sort.UPLOAD_DATE.value, from_date=one_week_ago)
-pprint_json(videos)
 
-video_tags_stats("692a9283a7048a867e4398b6")
+print(videos[0].video_url)
+print(videos[0].thumbnail_url)
+
+
+if __name__ == "__main__":
+    import json
+
+    for idx, video in enumerate(videos):
+        # Create a filename based on video id or index
+        json_filename = f"video_{idx}.json"
+
+        print(video.data)
+
+        data = {
+            "title": video.title,
+            "video": video.video_url,
+            "thumbnail": video.thumbnail_url,
+
+            "view_count": video.data["views"],
+
+            "tags": video.tags,
+
+            "external_reference": f"pmvheaven:{video.id}",
+            "creators": [
+                {
+                    "username": video.uploader_username,
+                    "display_name": video.uploader,
+                    "image": video.uploader_avatar,
+                    "role": "producer"
+                }
+            ],
+        }
+
+        # Pretty print to file
+        with open(json_filename, "w", encoding="utf-8") as f:
+            json.dump(data, f, indent=2, ensure_ascii=False)
+
+        print(f"Saved video info to {json_filename}")

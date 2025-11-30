@@ -1,6 +1,7 @@
 import path from "node:path";
 import { PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
+import { eq } from "drizzle-orm";
 import { nanoid } from "nanoid";
 import { NextResponse } from "next/server";
 import { z } from "zod";
@@ -29,6 +30,7 @@ const videoUploadSchema = z.object({
   tags: z.array(z.string()).optional(),
   createdAt: z.date().optional(),
   viewCount: z.number().int().min(0).optional(),
+  externalReference: z.string().optional(),
 });
 
 export async function POST(request: Request) {
@@ -76,6 +78,25 @@ async function handleVideoUpload(input: z.infer<typeof videoUploadSchema>) {
   }
 
   const { userId } = input;
+
+  // Check if external reference already exists
+  if (input.externalReference) {
+    const existingVideo = await db.query.video.findFirst({
+      where: eq(schema.video.externalReference, input.externalReference),
+    });
+
+    if (existingVideo) {
+      return NextResponse.json(
+        {
+          error: "Video with this external reference already exists",
+          videoId: existingVideo.id,
+          externalReference: input.externalReference,
+        },
+        { status: 409 },
+      );
+    }
+  }
+
   const videoId = createVideoId();
 
   // Generate S3 upload URL for video
@@ -130,6 +151,7 @@ async function handleVideoUpload(input: z.infer<typeof videoUploadSchema>) {
     createdAt: input.createdAt ?? new Date(),
     status: "approved",
     viewCount: input.viewCount ?? 0,
+    externalReference: input.externalReference ?? null,
   });
 
   if (input.creators && input.creators.length > 0) {
