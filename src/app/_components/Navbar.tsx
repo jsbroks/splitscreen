@@ -16,6 +16,7 @@ import {
   NavigationMenuList,
   navigationMenuTriggerStyle,
 } from "~/components/ui/navigation-menu";
+import { getAvatarUrl } from "~/lib/avatar-utils";
 import { AuthDialog } from "./AuthDialog";
 import { LogoutButton } from "./LogoutButton";
 import { SearchBar } from "./SearchBar";
@@ -104,7 +105,7 @@ export function Navbar({
                 <DropdownMenu>
                   <DropdownMenuTrigger>
                     <Avatar>
-                      <AvatarImage src={user.image ?? undefined} />
+                      <AvatarImage src={getAvatarUrl(user)} />
                       <AvatarFallback>
                         {user.username?.slice(0, 2).toUpperCase()}
                       </AvatarFallback>
@@ -113,6 +114,9 @@ export function Navbar({
                   <DropdownMenuContent align="end">
                     <DropdownMenuItem asChild>
                       <Link href={`/profile/${user.username}`}>Profile</Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                      <Link href="/profile/settings">Settings</Link>
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
                     <LogoutButton />

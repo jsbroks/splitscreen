@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { FollowButton } from "~/components/FollowButton";
 import { Avatar, AvatarFallback, AvatarImage } from "~/components/ui/avatar";
+import { getAvatarUrl } from "~/lib/avatar-utils";
 import { getSession } from "~/server/better-auth/server";
 import { db } from "~/server/db";
 import * as schema from "~/server/db/schema";
@@ -116,10 +117,7 @@ export default async function ProfilePage({
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
             <Avatar className="size-16">
-              <AvatarImage
-                alt={displayName ?? ""}
-                src={user.image ?? undefined}
-              />
+              <AvatarImage alt={displayName ?? ""} src={getAvatarUrl(user)} />
               <AvatarFallback>
                 {(user.displayUsername ?? user.name ?? user.username)
                   ?.slice(0, 2)

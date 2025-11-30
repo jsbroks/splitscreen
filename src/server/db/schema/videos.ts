@@ -57,6 +57,8 @@ export const video = pgTable("video", {
     .$onUpdate(() => /* @__PURE__ */ new Date())
     .notNull(),
 
+  externalReference: text("external_reference"),
+
   deletedAt: timestamp("deleted_at"),
 });
 

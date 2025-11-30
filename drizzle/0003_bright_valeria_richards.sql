@@ -1,0 +1,2 @@
+ALTER TABLE "video" ADD COLUMN "external_reference" text;--> statement-breakpoint
+CREATE UNIQUE INDEX "video_creator_video_id_creator_id_unique" ON "video_creator" USING btree ("video_id","creator_id","role");

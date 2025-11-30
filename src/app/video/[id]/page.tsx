@@ -8,6 +8,7 @@ import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
 import { AspectRatio } from "~/components/ui/aspect-ratio";
 import { Avatar, AvatarFallback, AvatarImage } from "~/components/ui/avatar";
 import { Button } from "~/components/ui/button";
+import { getAvatarUrl } from "~/lib/avatar-utils";
 import { getSession } from "~/server/better-auth/server";
 import { count, db, eq, takeFirst, takeFirstOrNull } from "~/server/db";
 import * as schema from "~/server/db/schema";
@@ -157,7 +158,7 @@ export default async function VideoPage({
             <section className="flex items-center gap-4">
               <div className="flex items-center gap-2">
                 <Avatar className="size-9 shrink-0">
-                  <AvatarImage src={video.uploadedBy.image ?? undefined} />
+                  <AvatarImage src={getAvatarUrl(video.uploadedBy)} />
                   <AvatarFallback className="size-9">
                     {(
                       video.uploadedBy.displayUsername ??
