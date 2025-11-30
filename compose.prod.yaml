@@ -9,6 +9,7 @@ services:
     labels:
       portway.route.path: /
     environment:
+      INTERNAL_API_KEY: XQkhZPEVXQ0LgJLr
       NEXT_PUBLIC_APP_URL: https://splithaven.com
 
       BETTER_AUTH_SECRET: voZW7ZzYqt1JWmGq

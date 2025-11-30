@@ -4,8 +4,8 @@
 # Usage: ./make-admin.sh <username>
 
 # Configuration
-API_KEY="${INTERNAL_API_KEY:-your-api-key-here}"
-BASE_URL="${BASE_URL:-http://localhost:3000}"
+API_KEY="${INTERNAL_API_KEY:XQkhZPEVXQ0LgJLr}"
+BASE_URL="${BASE_URL:-https://splithaven.com}"
 USERNAME="${1}"
 
 # Check if username is provided
