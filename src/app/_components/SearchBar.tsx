@@ -1,16 +1,28 @@
 "use client";
 
 import { Search } from "lucide-react";
+import { usePathname, useRouter } from "next/navigation";
 import { useQueryState } from "nuqs";
 import { useState } from "react";
 import { Input } from "~/components/ui/input";
 
 export const SearchBar = () => {
+  const pathname = usePathname();
+  const router = useRouter();
   const [searchQuery, setSearchQuery] = useQueryState("q");
   const [search, setSearch] = useState(searchQuery ?? "");
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    setSearchQuery(search?.trim() ?? "");
+
+    const trimmedSearch = search?.trim() ?? "";
+
+    if (pathname !== "/search") {
+      // Navigate to search page with query parameter
+      router.push(`/search?q=${encodeURIComponent(trimmedSearch)}`);
+    } else {
+      // Already on search page, just update the query parameter
+      setSearchQuery(trimmedSearch);
+    }
   };
   return (
     <div className="mx-4 max-w-md flex-1">

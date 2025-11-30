@@ -59,15 +59,6 @@ export const creatorsRouter = createTRPCRouter({
       return creator;
     }),
 
-  list: publicProcedure.query(async ({ ctx }) => {
-    return ctx.db.query.creator.findMany({
-      with: {
-        links: true,
-      },
-      orderBy: (creators, { asc }) => [asc(creators.displayName)],
-    });
-  }),
-
   infiniteList: publicProcedure
     .input(
       z.object({
