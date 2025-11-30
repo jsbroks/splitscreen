@@ -6,6 +6,14 @@ import * as schema from "~/server/db/schema";
 import { adminProcedure, createTRPCRouter, publicProcedure } from "../trpc";
 
 export const creatorsRouter = createTRPCRouter({
+  list: publicProcedure.query(async ({ ctx }) => {
+    const creators = await ctx.db.query.creator.findMany({
+      with: { links: true },
+      orderBy: (creators, { asc }) => [asc(creators.displayName)],
+    });
+    return creators;
+  }),
+
   create: adminProcedure
     .input(
       z.object({
