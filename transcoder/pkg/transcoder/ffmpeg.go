@@ -65,6 +65,9 @@ func (t *FFmpegTranscoder) TranscodeHLS(ctx context.Context, inputPath, outDir s
 		go func(r Rendition) {
 			defer wg.Done()
 			
+			// Log start of rendition processing
+			fmt.Printf("[HLS] Starting %dp rendition (bitrate: %dk, CRF: %d)\n", r.Height, r.VideoBitrateKbps, r.CRF)
+			
 			playlist := fmt.Sprintf("v%d.m3u8", r.Height)
 			segmentPattern := fmt.Sprintf("v%d_%%04d.ts", r.Height)
 			cmd := ff.New(t.ffmpegPath).Overwrite(true).Input(inputPath)
@@ -104,9 +107,11 @@ func (t *FFmpegTranscoder) TranscodeHLS(ctx context.Context, inputPath, outDir s
 			cmd.HLS(t.hlsSegSecs, "vod", "independent_segments", filepath.Join(outDir, segmentPattern)).
 				Output(filepath.Join(outDir, playlist))
 			if err := cmd.Run(ctx); err != nil {
+				fmt.Printf("[HLS] Failed %dp rendition: %v\n", r.Height, err)
 				errChan <- fmt.Errorf("ffmpeg HLS %dp: %w", r.Height, err)
 				return
 			}
+			fmt.Printf("[HLS] Completed %dp rendition\n", r.Height)
 			bandwidth := r.VideoBitrateKbps
 			if bandwidth <= 0 {
 				bandwidth = estimateBitrateForHeight(r.Height)
@@ -168,6 +173,8 @@ func (t *FFmpegTranscoder) GeneratePoster(ctx context.Context, inputPath, outPat
 }
 
 func (t *FFmpegTranscoder) GenerateThumbnailsAndVTT(ctx context.Context, inputPath, outDir, vttPath string, thumbHeight int, maxThumbnails int) error {
+	startTime := time.Now()
+	
 	if thumbHeight <= 0 {
 		thumbHeight = 100 // Default height
 	}
@@ -184,6 +191,7 @@ func (t *FFmpegTranscoder) GenerateThumbnailsAndVTT(ctx context.Context, inputPa
 	}
 
 	// Probe video to get duration and dimensions
+	fmt.Printf("[Thumbnails] Probing video: %s\n", filepath.Base(inputPath))
 	info, err := ff.Probe(ctx, t.ffprobePath, inputPath)
 	if err != nil {
 		return fmt.Errorf("probe: %w", err)
@@ -209,7 +217,11 @@ func (t *FFmpegTranscoder) GenerateThumbnailsAndVTT(ctx context.Context, inputPa
 		thumbWidth = roundEven(int(float64(thumbHeight) * aspectRatio))
 	}
 
+	fmt.Printf("[Thumbnails] Generating %d thumbnails (size: %dx%d, interval: %.1fs, video duration: %.1fs)\n",
+		numThumbs, thumbWidth, thumbHeight, intervalSec, info.DurationSec)
+
 	// Generate individual thumbnail images
+	lastLogTime := time.Now()
 	for i := 0; i < numThumbs; i++ {
 		timestamp := float64(i) * intervalSec
 		if timestamp >= info.DurationSec {
@@ -223,19 +235,31 @@ func (t *FFmpegTranscoder) GenerateThumbnailsAndVTT(ctx context.Context, inputPa
 		if err := t.GeneratePoster(ctx, inputPath, thumbPath, time.Duration(timestamp*float64(time.Second)), thumbWidth); err != nil {
 			return fmt.Errorf("generate thumbnail %d: %w", i, err)
 		}
+
+		// Log progress every 10 thumbnails or every 5 seconds
+		if (i+1)%10 == 0 || time.Since(lastLogTime) >= 5*time.Second {
+			percent := float64(i+1) / float64(numThumbs) * 100
+			fmt.Printf("[Thumbnails] Progress: %d/%d thumbnails (%.1f%%), elapsed: %s\n",
+				i+1, numThumbs, percent, time.Since(startTime).Truncate(time.Millisecond))
+			lastLogTime = time.Now()
+		}
 	}
 
+	fmt.Printf("[Thumbnails] All thumbnails generated (%d total), took %s\n",
+		numThumbs, time.Since(startTime).Truncate(time.Millisecond))
+
 	// Generate VTT file
+	fmt.Printf("[Thumbnails] Writing VTT file: %s\n", filepath.Base(vttPath))
 	vttContent := "WEBVTT\n\n"
 	thumbsDirName := filepath.Base(outDir)
 	
 	for i := 0; i < numThumbs; i++ {
-		startTime := float64(i) * intervalSec
-		endTime := startTime + intervalSec
+		startTimeVtt := float64(i) * intervalSec
+		endTime := startTimeVtt + intervalSec
 		if endTime > info.DurationSec {
 			endTime = info.DurationSec
 		}
-		if startTime >= info.DurationSec {
+		if startTimeVtt >= info.DurationSec {
 			break
 		}
 
@@ -243,7 +267,7 @@ func (t *FFmpegTranscoder) GenerateThumbnailsAndVTT(ctx context.Context, inputPa
 		thumbReference := fmt.Sprintf("%s/%s", thumbsDirName, thumbFilename)
 
 		vttContent += fmt.Sprintf("%s --> %s\n%s\n\n",
-			formatVTTTimestamp(startTime),
+			formatVTTTimestamp(startTimeVtt),
 			formatVTTTimestamp(endTime),
 			thumbReference,
 		)
@@ -253,6 +277,7 @@ func (t *FFmpegTranscoder) GenerateThumbnailsAndVTT(ctx context.Context, inputPa
 		return fmt.Errorf("write vtt: %w", err)
 	}
 
+	fmt.Printf("[Thumbnails] Complete! Total time: %s\n", time.Since(startTime).Truncate(time.Millisecond))
 	return nil
 }
 

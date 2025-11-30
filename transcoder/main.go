@@ -290,14 +290,34 @@ func processJob(
 
 	// Task 1: HLS transcoding (usually the longest)
 	go func() {
-		log.Info("starting HLS transcode", "id", j.ID)
+		taskStart := time.Now()
+		log.Info("starting HLS transcode", "id", j.ID, "renditions", len(renditions))
 		queue.UpdateHLSStatus(ctx, sqlDB, j.ID, queue.ProcessingStatusProcessing)
+		
+		// Start a heartbeat goroutine for long-running transcode
+		heartbeatDone := make(chan struct{})
+		go func() {
+			ticker := time.NewTicker(30 * time.Second)
+			defer ticker.Stop()
+			for {
+				select {
+				case <-heartbeatDone:
+					return
+				case <-ticker.C:
+					elapsed := time.Since(taskStart).Truncate(time.Second)
+					log.Info("HLS transcode in progress", "id", j.ID, "elapsed", elapsed, "renditions", len(renditions))
+				}
+			}
+		}()
+		
 		err := t.TranscodeHLS(ctx, localInputPath, outputPath, renditions)
+		close(heartbeatDone)
+		
 		if err != nil {
-			log.Error("transcode error", "id", j.ID, "error", err)
+			log.Error("transcode error", "id", j.ID, "error", err, "duration", time.Since(taskStart).Truncate(time.Millisecond))
 			queue.UpdateHLSStatus(ctx, sqlDB, j.ID, queue.ProcessingStatusFailed)
 		} else {
-			log.Info("HLS transcode complete", "id", j.ID)
+			log.Info("HLS transcode complete", "id", j.ID, "duration", time.Since(taskStart).Truncate(time.Millisecond))
 			queue.UpdateHLSStatus(ctx, sqlDB, j.ID, queue.ProcessingStatusDone)
 		}
 		s.SyncDirectory(ctx, outputPath, cfg.S3Bucket, j.OutputPrefix)
@@ -306,6 +326,7 @@ func processJob(
 
 	// Task 2: Hover preview generation
 	go func() {
+		taskStart := time.Now()
 		log.Info("starting hover preview generation", "id", j.ID)
 		queue.UpdateHoverPreviewStatus(ctx, sqlDB, j.ID, queue.ProcessingStatusProcessing)
 		err := t.GenerateHoverPreview(
@@ -315,10 +336,10 @@ func processJob(
 			720, 24,
 		)
 		if err != nil {
-			log.Error("generate hover preview error", "id", j.ID, "error", err)
+			log.Error("generate hover preview error", "id", j.ID, "error", err, "duration", time.Since(taskStart).Truncate(time.Millisecond))
 			queue.UpdateHoverPreviewStatus(ctx, sqlDB, j.ID, queue.ProcessingStatusFailed)
 		} else {
-			log.Info("hover preview complete", "id", j.ID)
+			log.Info("hover preview complete", "id", j.ID, "duration", time.Since(taskStart).Truncate(time.Millisecond))
 			queue.UpdateHoverPreviewStatus(ctx, sqlDB, j.ID, queue.ProcessingStatusDone)
 		}
 		s.SyncDirectory(ctx, outputPath, cfg.S3Bucket, j.OutputPrefix)
@@ -327,6 +348,7 @@ func processJob(
 
 	// Task 3: Thumbnail and VTT generation
 	go func() {
+		taskStart := time.Now()
 		log.Info("starting thumbnail generation", "id", j.ID)
 		queue.UpdateScrubberPreviewStatus(ctx, sqlDB, j.ID, queue.ProcessingStatusProcessing)
 		thumbsDir := filepath.Join(outputPath, "thumbnails")
@@ -338,10 +360,10 @@ func processJob(
 			100, // Maximum number of thumbnails (will be less for shorter videos)
 		)
 		if err != nil {
-			log.Error("generate thumbnails and vtt error", "id", j.ID, "error", err)
+			log.Error("generate thumbnails and vtt error", "id", j.ID, "error", err, "duration", time.Since(taskStart).Truncate(time.Millisecond))
 			queue.UpdateScrubberPreviewStatus(ctx, sqlDB, j.ID, queue.ProcessingStatusFailed)
 		} else {
-			log.Info("thumbnails and VTT complete", "id", j.ID)
+			log.Info("thumbnails and VTT complete", "id", j.ID, "duration", time.Since(taskStart).Truncate(time.Millisecond))
 			queue.UpdateScrubberPreviewStatus(ctx, sqlDB, j.ID, queue.ProcessingStatusDone)
 		}
 		s.SyncDirectory(ctx, outputPath, cfg.S3Bucket, j.OutputPrefix)
@@ -350,12 +372,13 @@ func processJob(
 
 	// Generate a thumbnail at 25% of the video's duration
 	go func() {
+		taskStart := time.Now()
 		log.Info("starting 25pct thumbnail generation", "id", j.ID)
 		queue.UpdatePosterStatus(ctx, sqlDB, j.ID, queue.ProcessingStatusProcessing)
 		// Probe video info to get duration
 		info, err := t.ProbeVideo(ctx, localInputPath)
 		if err != nil {
-			log.Error("failed to probe video for 25pct thumbnail", "id", j.ID, "error", err)
+			log.Error("failed to probe video for 25pct thumbnail", "id", j.ID, "error", err, "duration", time.Since(taskStart).Truncate(time.Millisecond))
 			queue.UpdatePosterStatus(ctx, sqlDB, j.ID, queue.ProcessingStatusFailed)
 			results <- taskResult{"25pct thumbnail", err}
 			return
@@ -364,10 +387,10 @@ func processJob(
 		thumbPath := filepath.Join(outputPath, "thumb_25pct.jpg")
 		err = t.GeneratePoster(ctx, localInputPath, thumbPath, thumbTime, 480)
 		if err != nil {
-			log.Error("generate 25pct thumbnail error", "id", j.ID, "error", err)
+			log.Error("generate 25pct thumbnail error", "id", j.ID, "error", err, "duration", time.Since(taskStart).Truncate(time.Millisecond))
 			queue.UpdatePosterStatus(ctx, sqlDB, j.ID, queue.ProcessingStatusFailed)
 		} else {
-			log.Info("25pct thumbnail complete", "id", j.ID, "path", thumbPath)
+			log.Info("25pct thumbnail complete", "id", j.ID, "path", thumbPath, "duration", time.Since(taskStart).Truncate(time.Millisecond))
 			queue.UpdatePosterStatus(ctx, sqlDB, j.ID, queue.ProcessingStatusDone)
 		}
 		s.SyncDirectory(ctx, outputPath, cfg.S3Bucket, j.OutputPrefix)

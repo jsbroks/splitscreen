@@ -1,12 +1,15 @@
 package ffmpeg
 
 import (
+	"bufio"
 	"context"
 	"fmt"
 	"os/exec"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/charmbracelet/log"
 )
 
 // Command provides a fluent API for building and running ffmpeg invocations.
@@ -213,11 +216,84 @@ func (c *Command) buildArgs() []string {
 
 func (c *Command) Run(ctx context.Context) error {
 	args := c.buildArgs()
+	
+	// Add progress reporting
+	args = append([]string{"-progress", "pipe:2", "-stats_period", "5"}, args...)
+	
 	cmd := exec.CommandContext(ctx, c.bin, args...)
-	out, err := cmd.CombinedOutput()
+	
+	// Capture stderr for progress monitoring
+	stderr, err := cmd.StderrPipe()
 	if err != nil {
-		return fmt.Errorf("ffmpeg failed: %s\nargs: %s\n%s", c.bin, strings.Join(args, " "), string(out))
+		return fmt.Errorf("failed to create stderr pipe: %w", err)
 	}
+	
+	// Capture stdout for error messages
+	stdout, err := cmd.StdoutPipe()
+	if err != nil {
+		return fmt.Errorf("failed to create stdout pipe: %w", err)
+	}
+	
+	if err := cmd.Start(); err != nil {
+		return fmt.Errorf("ffmpeg failed to start: %s\nargs: %s", c.bin, strings.Join(args, " "))
+	}
+	
+	// Monitor progress in a goroutine
+	progressDone := make(chan struct{})
+	go func() {
+		defer close(progressDone)
+		scanner := bufio.NewScanner(stderr)
+		var lastTime string
+		var lastLog time.Time
+		logInterval := 10 * time.Second
+		
+		for scanner.Scan() {
+			line := scanner.Text()
+			
+			// Parse progress lines (format: key=value)
+			if strings.HasPrefix(line, "out_time_ms=") {
+				// Extract timestamp
+				parts := strings.SplitN(line, "=", 2)
+				if len(parts) == 2 {
+					microseconds, parseErr := strconv.ParseInt(parts[1], 10, 64)
+					if parseErr == nil && microseconds > 0 {
+						// Convert to human-readable time
+						seconds := microseconds / 1000000
+						h := seconds / 3600
+						m := (seconds % 3600) / 60
+						s := seconds % 60
+						lastTime = fmt.Sprintf("%02d:%02d:%02d", h, m, s)
+					}
+				}
+			} else if strings.HasPrefix(line, "progress=") {
+				parts := strings.SplitN(line, "=", 2)
+				if len(parts) == 2 && parts[1] == "continue" && lastTime != "" {
+					// Log progress periodically
+					now := time.Now()
+					if now.Sub(lastLog) >= logInterval {
+						log.Info("ffmpeg progress", "position", lastTime)
+						lastLog = now
+					}
+				}
+			}
+		}
+	}()
+	
+	// Consume stdout to prevent blocking
+	go func() {
+		scanner := bufio.NewScanner(stdout)
+		for scanner.Scan() {
+			// Just consume the output
+		}
+	}()
+	
+	// Wait for command to complete
+	if err := cmd.Wait(); err != nil {
+		<-progressDone // Wait for progress monitoring to finish
+		return fmt.Errorf("ffmpeg failed: %s\nargs: %s", c.bin, strings.Join(args, " "))
+	}
+	
+	<-progressDone // Wait for progress monitoring to finish
 	return nil
 }
 

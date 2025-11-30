@@ -134,7 +134,7 @@ if __name__ == "__main__":
             "title": video.title.strip(),
             "video": video.video_url,
             "thumbnail": video.thumbnail_url,
-            "created_at": video.upload_date.isoformat(),
+            "created_at": video.data.get("uploadDate"),
 
             "view_count": video.data["views"],
 
