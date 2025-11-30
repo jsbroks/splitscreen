@@ -11,11 +11,9 @@ import {
 } from "~/components/ui/dropdown-menu";
 import {
   NavigationMenu,
-  NavigationMenuContent,
   NavigationMenuItem,
   NavigationMenuLink,
   NavigationMenuList,
-  NavigationMenuTrigger,
   navigationMenuTriggerStyle,
 } from "~/components/ui/navigation-menu";
 import { AuthDialog } from "./AuthDialog";
@@ -162,16 +160,6 @@ export function Navbar({
                 >
                   <Link href="/creators">Creators</Link>
                 </NavigationMenuLink>
-              </NavigationMenuItem>
-
-              <NavigationMenuItem>
-                <NavigationMenuTrigger>Categories</NavigationMenuTrigger>
-                <NavigationMenuContent>
-                  <div>
-                    <Link href="/">PMV</Link>
-                    <Link href="/">Cute vs Slut</Link>
-                  </div>
-                </NavigationMenuContent>
               </NavigationMenuItem>
             </NavigationMenuList>
           </NavigationMenu>

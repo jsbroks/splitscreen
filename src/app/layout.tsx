@@ -1,5 +1,6 @@
 import "~/styles/globals.css";
 
+import { GoogleTagManager } from "@next/third-parties/google";
 import type { Metadata } from "next";
 import { Geist } from "next/font/google";
 import { NuqsAdapter } from "nuqs/adapters/next/app";
@@ -39,6 +40,7 @@ export default async function RootLayout({
 
   return (
     <html className={`${geist.variable} dark dark:bg-black`} lang="en">
+      <GoogleTagManager gtmId="G-E5VJ7LLN3K" />
       <head>
         <script
           data-website-id="ee09c5cc-7555-4da0-88fa-3dec245ee09f"

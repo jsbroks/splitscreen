@@ -5,7 +5,6 @@ import { nanoid } from "nanoid";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { env } from "~/env";
-import { getSession } from "~/server/better-auth/server";
 import { db } from "~/server/db";
 import * as schema from "~/server/db/schema";
 import { createVideoId } from "~/server/db/schema/videos";
@@ -13,6 +12,7 @@ import { upsertVideoToTypesense } from "~/server/typesense/utils/upsert-video";
 
 const videoUploadSchema = z.object({
   title: z.string().min(1, "Title is required"),
+  userId: z.string().min(1, "User ID is required"),
   description: z.string().optional(),
   filename: z.string().min(1, "Filename is required"),
   contentType: z.string().optional(),
@@ -28,44 +28,29 @@ const videoUploadSchema = z.object({
     .optional(),
   tags: z.array(z.string()).optional(),
   createdAt: z.date().optional(),
+  viewCount: z.number().int().min(0).optional(),
 });
 
 export async function POST(request: Request) {
   try {
-    // Check authentication - either session or API key
-    const authHeader = request.headers.get("authorization");
-    const apiKey = authHeader?.replace("Bearer ", "");
+    const apiKey = request.headers.get("x-api-key");
 
-    let userId: string;
-
-    if (apiKey && apiKey === env.INTERNAL_API_KEY) {
-      // For API key auth, we'll need a userId in the request body
-      const rawBody = await request.json();
-      if (!rawBody.userId) {
-        return NextResponse.json(
-          { error: "userId is required when using API key authentication" },
-          { status: 400 },
-        );
-      }
-      userId = rawBody.userId;
-
-      // Re-parse with the userId included
-      const body = videoUploadSchema.parse(rawBody);
-      return await handleVideoUpload(body, userId);
-    } else {
-      // Check session authentication
-      const session = await getSession();
-      if (!session?.user?.id) {
-        return NextResponse.json(
-          { error: "Unauthorized - please provide a valid session or API key" },
-          { status: 401 },
-        );
-      }
-      userId = session.user.id;
-
-      const body = videoUploadSchema.parse(await request.json());
-      return await handleVideoUpload(body, userId);
+    if (!env.INTERNAL_API_KEY) {
+      return NextResponse.json(
+        { error: "API key authentication is not configured on the server" },
+        { status: 500 },
+      );
     }
+
+    if (!apiKey || apiKey !== env.INTERNAL_API_KEY) {
+      return NextResponse.json(
+        { error: "Invalid or missing API key" },
+        { status: 401 },
+      );
+    }
+
+    const body = await request.json();
+    return await handleVideoUpload(body);
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json(
@@ -82,10 +67,7 @@ export async function POST(request: Request) {
   }
 }
 
-async function handleVideoUpload(
-  input: z.infer<typeof videoUploadSchema>,
-  userId: string,
-) {
+async function handleVideoUpload(input: z.infer<typeof videoUploadSchema>) {
   if (!env.S3_BUCKET) {
     return NextResponse.json(
       { error: "S3_BUCKET not configured" },
@@ -93,6 +75,7 @@ async function handleVideoUpload(
     );
   }
 
+  const { userId } = input;
   const videoId = createVideoId();
 
   // Generate S3 upload URL for video
@@ -146,6 +129,7 @@ async function handleVideoUpload(
     originalThumbnailKey: thumbnailKey ?? null,
     createdAt: input.createdAt ?? new Date(),
     status: "approved",
+    viewCount: input.viewCount ?? 0,
   });
 
   if (input.creators && input.creators.length > 0) {
