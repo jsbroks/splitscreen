@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/signal"
 	"runtime"
+	"sync"
 	"syscall"
 	"time"
 	"transcoder/pkg/config"
@@ -38,6 +39,129 @@ func checkDiskSpace(path string, minGB int) error {
 	return nil
 }
 
+// JobStatus tracks the state of a job being processed
+type JobStatus struct {
+	ID                    string
+	VideoID               string
+	StartedAt             time.Time
+	HLSStatus             queue.ProcessingStatus
+	HLSStartedAt          *time.Time
+	PosterStatus          queue.ProcessingStatus
+	PosterStartedAt       *time.Time
+	ScrubberPreviewStatus queue.ProcessingStatus
+	ScrubberStartedAt     *time.Time
+	HoverPreviewStatus    queue.ProcessingStatus
+	HoverStartedAt        *time.Time
+	mu                    sync.Mutex
+}
+
+// JobTracker tracks all jobs currently being processed by this transcoder instance
+type JobTracker struct {
+	jobs map[string]*JobStatus
+	mu   sync.RWMutex
+}
+
+func NewJobTracker() *JobTracker {
+	return &JobTracker{
+		jobs: make(map[string]*JobStatus),
+	}
+}
+
+func (jt *JobTracker) Add(jobID, videoID string) *JobStatus {
+	jt.mu.Lock()
+	defer jt.mu.Unlock()
+	
+	status := &JobStatus{
+		ID:                    jobID,
+		VideoID:               videoID,
+		StartedAt:             time.Now(),
+		HLSStatus:             queue.ProcessingStatusPending,
+		PosterStatus:          queue.ProcessingStatusPending,
+		ScrubberPreviewStatus: queue.ProcessingStatusPending,
+		HoverPreviewStatus:    queue.ProcessingStatusPending,
+	}
+	jt.jobs[jobID] = status
+	return status
+}
+
+func (jt *JobTracker) Remove(jobID string) {
+	jt.mu.Lock()
+	defer jt.mu.Unlock()
+	delete(jt.jobs, jobID)
+}
+
+func (jt *JobTracker) GetAll() []*JobStatus {
+	jt.mu.RLock()
+	defer jt.mu.RUnlock()
+	
+	result := make([]*JobStatus, 0, len(jt.jobs))
+	for _, job := range jt.jobs {
+		result = append(result, job)
+	}
+	return result
+}
+
+func (js *JobStatus) UpdateHLS(status queue.ProcessingStatus) {
+	js.mu.Lock()
+	defer js.mu.Unlock()
+	js.HLSStatus = status
+	if status == queue.ProcessingStatusProcessing && js.HLSStartedAt == nil {
+		now := time.Now()
+		js.HLSStartedAt = &now
+	}
+}
+
+func (js *JobStatus) UpdatePoster(status queue.ProcessingStatus) {
+	js.mu.Lock()
+	defer js.mu.Unlock()
+	js.PosterStatus = status
+	if status == queue.ProcessingStatusProcessing && js.PosterStartedAt == nil {
+		now := time.Now()
+		js.PosterStartedAt = &now
+	}
+}
+
+func (js *JobStatus) UpdateScrubber(status queue.ProcessingStatus) {
+	js.mu.Lock()
+	defer js.mu.Unlock()
+	js.ScrubberPreviewStatus = status
+	if status == queue.ProcessingStatusProcessing && js.ScrubberStartedAt == nil {
+		now := time.Now()
+		js.ScrubberStartedAt = &now
+	}
+}
+
+func (js *JobStatus) UpdateHover(status queue.ProcessingStatus) {
+	js.mu.Lock()
+	defer js.mu.Unlock()
+	js.HoverPreviewStatus = status
+	if status == queue.ProcessingStatusProcessing && js.HoverStartedAt == nil {
+		now := time.Now()
+		js.HoverStartedAt = &now
+	}
+}
+
+func (js *JobStatus) GetProgress() (completed, total int) {
+	js.mu.Lock()
+	defer js.mu.Unlock()
+	
+	total = 4
+	completed = 0
+	if js.HLSStatus == queue.ProcessingStatusDone {
+		completed++
+	}
+	if js.PosterStatus == queue.ProcessingStatusDone {
+		completed++
+	}
+	if js.ScrubberPreviewStatus == queue.ProcessingStatusDone {
+		completed++
+	}
+	if js.HoverPreviewStatus == queue.ProcessingStatusDone {
+		completed++
+	}
+	return completed, total
+}
+
 // logMemoryStats logs current memory usage
 func logMemoryStats() {
 	var m runtime.MemStats
@@ -50,6 +174,89 @@ func logMemoryStats() {
 	)
 }
 
+// formatTaskStatus returns a human-readable status string with timing info
+func formatTaskStatus(status queue.ProcessingStatus, startedAt *time.Time) string {
+	switch status {
+	case queue.ProcessingStatusPending:
+		return "waiting"
+	case queue.ProcessingStatusProcessing:
+		if startedAt != nil {
+			elapsed := time.Since(*startedAt).Truncate(time.Second)
+			return fmt.Sprintf("running %s", elapsed)
+		}
+		return "running"
+	case queue.ProcessingStatusDone:
+		return "done"
+	case queue.ProcessingStatusFailed:
+		return "failed"
+	default:
+		return string(status)
+	}
+}
+
+// logJobStatus logs current status of jobs being processed by this transcoder
+func logJobStatus(tracker *JobTracker, maxParallelTasksPerJob int) {
+	jobs := tracker.GetAll()
+	
+	if len(jobs) == 0 {
+		log.Info("transcoder status: idle", "active_jobs", 0)
+		return
+	}
+
+	// Count tasks waiting across all jobs
+	totalWaiting := 0
+	for _, job := range jobs {
+		job.mu.Lock()
+		if job.HLSStatus == queue.ProcessingStatusPending {
+			totalWaiting++
+		}
+		if job.PosterStatus == queue.ProcessingStatusPending {
+			totalWaiting++
+		}
+		if job.ScrubberPreviewStatus == queue.ProcessingStatusPending {
+			totalWaiting++
+		}
+		if job.HoverPreviewStatus == queue.ProcessingStatusPending {
+			totalWaiting++
+		}
+		job.mu.Unlock()
+	}
+	
+	log.Info("transcoder status", 
+		"active_jobs", len(jobs),
+		"max_tasks_per_job", maxParallelTasksPerJob,
+		"tasks_waiting", totalWaiting,
+	)
+	
+	if totalWaiting > 0 {
+		log.Info("note: tasks showing 'waiting' are queued due to max_tasks_per_job limit")
+	}
+
+	// Log details of each running job
+	for _, job := range jobs {
+		elapsed := time.Since(job.StartedAt).Truncate(time.Second)
+		completed, total := job.GetProgress()
+		
+		job.mu.Lock()
+		hlsStatus := formatTaskStatus(job.HLSStatus, job.HLSStartedAt)
+		posterStatus := formatTaskStatus(job.PosterStatus, job.PosterStartedAt)
+		scrubberStatus := formatTaskStatus(job.ScrubberPreviewStatus, job.ScrubberStartedAt)
+		hoverStatus := formatTaskStatus(job.HoverPreviewStatus, job.HoverStartedAt)
+		job.mu.Unlock()
+		
+		log.Info("active job",
+			"job_id", job.ID,
+			"video_id", job.VideoID,
+			"elapsed", elapsed,
+			"progress", fmt.Sprintf("%d/%d", completed, total),
+			"hls", hlsStatus,
+			"poster", posterStatus,
+			"scrubber", scrubberStatus,
+			"hover", hoverStatus,
+		)
+	}
+}
+
 func main() {
 	cfg, err := config.Load()
 	if err != nil {
@@ -59,13 +266,18 @@ func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	// Handle graceful shutdown
+	// Handle graceful shutdown with forced exit on second signal
 	sigCh := make(chan os.Signal, 1)
 	signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM)
 	go func() {
-		<-sigCh
-		log.Info("signal received, shutting down...")
+		sig := <-sigCh
+		log.Info("signal received, shutting down gracefully... (press Ctrl+C again to force exit)", "signal", sig)
 		cancel()
+		
+		// Second signal forces immediate exit
+		sig = <-sigCh
+		log.Error("second signal received, forcing immediate exit", "signal", sig)
+		os.Exit(1)
 	}()
 
 	sqlDB, err := db.Open(ctx, cfg.DatabaseURL)
@@ -111,6 +323,9 @@ func main() {
 		"temp_dir_min_free_gb", cfg.TempDirMinFreeGB,
 	)
 
+	// Create job tracker for internal state management
+	jobTracker := NewJobTracker()
+
 	// Start periodic memory stats logging
 	go func() {
 		ticker := time.NewTicker(60 * time.Second)
@@ -124,10 +339,42 @@ func main() {
 			}
 		}
 	}()
+
+	// Start periodic job status logging
+	go func() {
+		ticker := time.NewTicker(30 * time.Second)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-ticker.C:
+				logJobStatus(jobTracker, cfg.MaxParallelTasksPerJob)
+			}
+		}
+	}()
+	// Track active goroutines for graceful shutdown
+	activeJobs := make(chan struct{}, workerLimit)
+	
 	for {
 		select {
 		case <-ctx.Done():
-			log.Warn("context cancelled, exiting queue loop")
+			log.Info("context cancelled, waiting for active jobs to complete...", "active", len(activeJobs))
+			
+			// Wait for all active jobs to complete
+			ticker := time.NewTicker(5 * time.Second)
+			defer ticker.Stop()
+			
+			for len(activeJobs) > 0 {
+				select {
+				case <-ticker.C:
+					log.Info("waiting for jobs to complete", "remaining", len(activeJobs))
+				case <-activeJobs:
+					// Job completed
+				}
+			}
+			
+			log.Info("all jobs completed, exiting cleanly")
 			return
 		default:
 		}
@@ -145,7 +392,13 @@ func main() {
 
 		// Acquire semaphore BEFORE claiming job - this ensures we only mark jobs as
 		// "running" when we actually have compute capacity to process them
-		sem <- struct{}{}
+		select {
+		case sem <- struct{}{}:
+			// Got semaphore, continue
+		case <-ctx.Done():
+			// Context cancelled while waiting for semaphore
+			continue
+		}
 		
 		job, err := queue.ClaimNext(ctx, sqlDB)
 		if err != nil {
@@ -160,9 +413,13 @@ func main() {
 		}
 
 		// Job is now marked as running and we have compute capacity + disk space
+		activeJobs <- struct{}{} // Track active job
 		go func(j *queue.TranscodeJob) {
-			defer func() { <-sem }()
-			result := processJob(ctx, sqlDB, j, ff, s3sync, cfg)
+			defer func() { 
+				<-sem 
+				<-activeJobs // Job completed
+			}()
+			result := processJob(ctx, sqlDB, j, ff, s3sync, cfg, jobTracker)
 			if result != nil {
 				log.Error("job error", "id", j.ID, "error", result)
 				queue.Fail(ctx, sqlDB, j.ID, result.Error())
@@ -255,12 +512,19 @@ func processJob(
 	t transcoder.Transcoder,
 	s *storage.S3Syncer,
 	cfg *config.Config,
+	tracker *JobTracker,
 ) error {
 	start := time.Now()
 
+	// Track this job internally
+	jobStatus := tracker.Add(j.ID, j.VideoID)
+	defer tracker.Remove(j.ID)
+
 	// Create contextual logger with job_id and video_id for traceability
 	jobLogger := log.With("job_id", j.ID, "video_id", j.VideoID)
-	jobLogger.Info("processing job", "input", j.InputKey)
+	jobLogger.Info("========================================")
+	jobLogger.Info("STARTING JOB", "input", j.InputKey, "attempt", j.Attempts)
+	jobLogger.Info("========================================")
 
 	inputPath := j.InputKey
 
@@ -371,11 +635,12 @@ func processJob(
 	taskSem := make(chan struct{}, taskCount) // Semaphore to limit concurrent tasks
 
 	// Task 1: HLS transcoding (usually the longest)
-	taskSem <- struct{}{}
 	go func() {
+		taskSem <- struct{}{} // Acquire inside goroutine so all tasks can spawn
 		defer func() { <-taskSem }()
 		taskStart := time.Now()
 		jobLogger.Info("starting HLS transcode", "renditions", len(renditions))
+		jobStatus.UpdateHLS(queue.ProcessingStatusProcessing)
 		queue.UpdateHLSStatus(ctx, sqlDB, j.ID, queue.ProcessingStatusProcessing)
 
 		// Start a heartbeat goroutine for long-running transcode
@@ -403,9 +668,11 @@ func processJob(
 
 		if err != nil {
 			jobLogger.Error("transcode error", "error", err, "duration", time.Since(taskStart).Truncate(time.Millisecond))
+			jobStatus.UpdateHLS(queue.ProcessingStatusFailed)
 			queue.UpdateHLSStatus(ctx, sqlDB, j.ID, queue.ProcessingStatusFailed)
 		} else {
 			jobLogger.Info("HLS transcode complete", "duration", time.Since(taskStart).Truncate(time.Millisecond))
+			jobStatus.UpdateHLS(queue.ProcessingStatusDone)
 			queue.UpdateHLSStatus(ctx, sqlDB, j.ID, queue.ProcessingStatusDone)
 		}
 
@@ -413,11 +680,12 @@ func processJob(
 	}()
 
 	// Task 2: Hover preview generation
-	taskSem <- struct{}{}
 	go func() {
+		taskSem <- struct{}{} // Acquire inside goroutine so all tasks can spawn
 		defer func() { <-taskSem }()
 		taskStart := time.Now()
 		jobLogger.Info("starting hover preview generation")
+		jobStatus.UpdateHover(queue.ProcessingStatusProcessing)
 		queue.UpdateHoverPreviewStatus(ctx, sqlDB, j.ID, queue.ProcessingStatusProcessing)
 		err := t.GenerateHoverPreview(
 			ctx, localInputPath,
@@ -432,9 +700,11 @@ func processJob(
 
 		if err != nil {
 			jobLogger.Error("generate hover preview error", "error", err, "duration", time.Since(taskStart).Truncate(time.Millisecond))
+			jobStatus.UpdateHover(queue.ProcessingStatusFailed)
 			queue.UpdateHoverPreviewStatus(ctx, sqlDB, j.ID, queue.ProcessingStatusFailed)
 		} else {
 			jobLogger.Info("hover preview complete", "duration", time.Since(taskStart).Truncate(time.Millisecond))
+			jobStatus.UpdateHover(queue.ProcessingStatusDone)
 			queue.UpdateHoverPreviewStatus(ctx, sqlDB, j.ID, queue.ProcessingStatusDone)
 		}
 
@@ -442,11 +712,12 @@ func processJob(
 	}()
 
 	// Task 3: Thumbnail and VTT generation
-	taskSem <- struct{}{}
 	go func() {
+		taskSem <- struct{}{} // Acquire inside goroutine so all tasks can spawn
 		defer func() { <-taskSem }()
 		taskStart := time.Now()
 		jobLogger.Info("starting thumbnail generation")
+		jobStatus.UpdateScrubber(queue.ProcessingStatusProcessing)
 		queue.UpdateScrubberPreviewStatus(ctx, sqlDB, j.ID, queue.ProcessingStatusProcessing)
 		thumbsDir := filepath.Join(outputPath, "thumbnails")
 		err := t.GenerateThumbnailsAndVTT(
@@ -463,9 +734,11 @@ func processJob(
 
 		if err != nil {
 			jobLogger.Error("generate thumbnails and vtt error", "error", err, "duration", time.Since(taskStart).Truncate(time.Millisecond))
+			jobStatus.UpdateScrubber(queue.ProcessingStatusFailed)
 			queue.UpdateScrubberPreviewStatus(ctx, sqlDB, j.ID, queue.ProcessingStatusFailed)
 		} else {
 			jobLogger.Info("thumbnails and VTT complete", "duration", time.Since(taskStart).Truncate(time.Millisecond))
+			jobStatus.UpdateScrubber(queue.ProcessingStatusDone)
 			queue.UpdateScrubberPreviewStatus(ctx, sqlDB, j.ID, queue.ProcessingStatusDone)
 		}
 
@@ -473,16 +746,18 @@ func processJob(
 	}()
 
 	// Generate a thumbnail at 25% of the video's duration
-	taskSem <- struct{}{}
 	go func() {
+		taskSem <- struct{}{} // Acquire inside goroutine so all tasks can spawn
 		defer func() { <-taskSem }()
 		taskStart := time.Now()
 		jobLogger.Info("starting 25pct thumbnail generation")
+		jobStatus.UpdatePoster(queue.ProcessingStatusProcessing)
 		queue.UpdatePosterStatus(ctx, sqlDB, j.ID, queue.ProcessingStatusProcessing)
 		// Probe video info to get duration
 		info, err := t.ProbeVideo(ctx, localInputPath)
 		if err != nil {
 			jobLogger.Error("failed to probe video for 25pct thumbnail", "error", err, "duration", time.Since(taskStart).Truncate(time.Millisecond))
+			jobStatus.UpdatePoster(queue.ProcessingStatusFailed)
 			queue.UpdatePosterStatus(ctx, sqlDB, j.ID, queue.ProcessingStatusFailed)
 			results <- taskResult{"25pct thumbnail", err}
 			return
@@ -497,9 +772,11 @@ func processJob(
 	
 		if err != nil {
 			jobLogger.Error("generate 25pct thumbnail error", "error", err, "duration", time.Since(taskStart).Truncate(time.Millisecond))
+			jobStatus.UpdatePoster(queue.ProcessingStatusFailed)
 			queue.UpdatePosterStatus(ctx, sqlDB, j.ID, queue.ProcessingStatusFailed)
 		} else {
 			jobLogger.Info("25pct thumbnail complete", "path", thumbPath, "duration", time.Since(taskStart).Truncate(time.Millisecond))
+			jobStatus.UpdatePoster(queue.ProcessingStatusDone)
 			queue.UpdatePosterStatus(ctx, sqlDB, j.ID, queue.ProcessingStatusDone)
 		}
 
@@ -536,7 +813,9 @@ func processJob(
 		return fmt.Errorf("complete: %w", err)
 	}
 
-	jobLogger.Info("job done", "status", "in_review", "duration", time.Since(start).Truncate(time.Millisecond))
+	jobLogger.Info("========================================")
+	jobLogger.Info("JOB COMPLETE", "status", "in_review", "duration", time.Since(start).Truncate(time.Millisecond))
+	jobLogger.Info("========================================")
 	return nil
 }
 

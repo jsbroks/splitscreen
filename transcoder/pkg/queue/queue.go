@@ -180,3 +180,87 @@ func UpdateHoverPreviewStatus(ctx context.Context, db *sql.DB, jobID string, sta
 	}
 	return nil
 }
+
+// QueueStats represents statistics about the transcode queue
+type QueueStats struct {
+	Queued          int
+	Running         int
+	RunningJobs     []RunningJobInfo
+	RecentCompleted int // Completed in last 5 minutes
+	RecentFailed    int // Failed in last 5 minutes
+}
+
+// RunningJobInfo contains information about a running job
+type RunningJobInfo struct {
+	ID                    string
+	VideoID               string
+	StartedAt             time.Time
+	HLSStatus             ProcessingStatus
+	PosterStatus          ProcessingStatus
+	ScrubberPreviewStatus ProcessingStatus
+	HoverPreviewStatus    ProcessingStatus
+}
+
+// GetQueueStats returns current statistics about the transcode queue
+func GetQueueStats(ctx context.Context, db *sql.DB) (*QueueStats, error) {
+	stats := &QueueStats{}
+
+	// Count queued jobs
+	err := db.QueryRowContext(ctx, `
+		SELECT COUNT(*) FROM transcode_queue WHERE status = $1
+	`, StatusQueued).Scan(&stats.Queued)
+	if err != nil {
+		return nil, fmt.Errorf("count queued: %w", err)
+	}
+
+	// Count running jobs
+	err = db.QueryRowContext(ctx, `
+		SELECT COUNT(*) FROM transcode_queue WHERE status = $1
+	`, StatusRunning).Scan(&stats.Running)
+	if err != nil {
+		return nil, fmt.Errorf("count running: %w", err)
+	}
+
+	// Get details of running jobs
+	rows, err := db.QueryContext(ctx, `
+		SELECT id, video_id, started_at, 
+		       hls_status, poster_status, scrubber_preview_status, hover_preview_status
+		FROM transcode_queue
+		WHERE status = $1
+		ORDER BY started_at ASC
+	`, StatusRunning)
+	if err != nil {
+		return nil, fmt.Errorf("query running jobs: %w", err)
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var job RunningJobInfo
+		err := rows.Scan(&job.ID, &job.VideoID, &job.StartedAt,
+			&job.HLSStatus, &job.PosterStatus, &job.ScrubberPreviewStatus, &job.HoverPreviewStatus)
+		if err != nil {
+			return nil, fmt.Errorf("scan running job: %w", err)
+		}
+		stats.RunningJobs = append(stats.RunningJobs, job)
+	}
+
+	// Count recently completed jobs (last 5 minutes)
+	err = db.QueryRowContext(ctx, `
+		SELECT COUNT(*) FROM transcode_queue 
+		WHERE status = $1 AND finished_at > NOW() - INTERVAL '5 minutes'
+	`, StatusDone).Scan(&stats.RecentCompleted)
+	if err != nil {
+		return nil, fmt.Errorf("count recent completed: %w", err)
+	}
+
+	// Count recently failed jobs (last 5 minutes)
+	err = db.QueryRowContext(ctx, `
+		SELECT COUNT(*) FROM transcode_queue 
+		WHERE status = $1 AND finished_at > NOW() - INTERVAL '5 minutes'
+	`, StatusFailed).Scan(&stats.RecentFailed)
+	if err != nil {
+		return nil, fmt.Errorf("count recent failed: %w", err)
+	}
+
+	return stats, nil
+}

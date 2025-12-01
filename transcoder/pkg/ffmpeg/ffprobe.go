@@ -28,8 +28,13 @@ func Probe(ctx context.Context, ffprobePath, inputPath string) (ProbeInfo, error
 		inputPath,
 	}
 	cmd := exec.CommandContext(ctx, ffprobePath, args...)
-	out, err := cmd.Output()
+	out, err := cmd.CombinedOutput()
 	if err != nil {
+		// Include stderr output in error message for debugging
+		stderr := string(out)
+		if stderr != "" {
+			return ProbeInfo{}, fmt.Errorf("ffprobe failed: %w (output: %s)", err, stderr)
+		}
 		return ProbeInfo{}, fmt.Errorf("ffprobe failed: %w", err)
 	}
 	var parsed struct {

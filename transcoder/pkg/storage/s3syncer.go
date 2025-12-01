@@ -136,6 +136,8 @@ func (s *S3Syncer) SyncDirectory(ctx context.Context, localDir string, bucket st
 				mu.Unlock()
 				return // Skip upload
 			}
+
+			log.Info("uploading file", "local_path", t.localPath, "bucket", bucket, "key", t.key)
 			
 			// Upload the file
 			if err := s.uploadOne(ctx, t.localPath, bucket, t.key); err != nil {
@@ -153,9 +155,15 @@ func (s *S3Syncer) SyncDirectory(ctx context.Context, localDir string, bucket st
 	wg.Wait()
 	close(errChan)
 	
-	// Check for errors
-	if err := <-errChan; err != nil {
-		return err
+	// Collect and log all errors
+	var errors []error
+	for err := range errChan {
+		errors = append(errors, err)
+		log.Error("sync error", "error", err)
+	}
+	
+	if len(errors) > 0 {
+		return fmt.Errorf("sync failed with %d errors (first: %w)", len(errors), errors[0])
 	}
 	
 	log.Info("sync complete", "uploaded", uploadedCount, "skipped", skippedCount, "total", len(tasks))

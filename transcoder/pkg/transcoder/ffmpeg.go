@@ -227,9 +227,29 @@ func (t *FFmpegTranscoder) GenerateThumbnailsAndVTT(ctx context.Context, inputPa
 	}
 
 	// Probe video to get duration and dimensions
-	log.Info("probing video for thumbnails", "file", filepath.Base(inputPath))
+	// Add debugging info about the file
+	fileInfo, statErr := os.Stat(inputPath)
+	if statErr != nil {
+		log.Error("failed to stat input file before probe", 
+			"file", inputPath,
+			"error", statErr,
+		)
+		return fmt.Errorf("stat input file: %w", statErr)
+	}
+	
+	log.Info("probing video for thumbnails", 
+		"file", filepath.Base(inputPath),
+		"full_path", inputPath,
+		"size_bytes", fileInfo.Size(),
+	)
+	
 	info, err := ff.Probe(ctx, t.ffprobePath, inputPath)
 	if err != nil {
+		log.Error("ffprobe failed for thumbnails",
+			"file", inputPath,
+			"size_bytes", fileInfo.Size(),
+			"error", err,
+		)
 		return fmt.Errorf("probe: %w", err)
 	}
 
@@ -355,6 +375,10 @@ func (t *FFmpegTranscoder) GenerateVTT(ctx context.Context, inputPath, spritePat
 	}
 	info, err := ff.Probe(ctx, t.ffprobePath, inputPath)
 	if err != nil {
+		log.Error("ffprobe failed for sprite generation",
+			"file", inputPath,
+			"error", err,
+		)
 		return fmt.Errorf("probe: %w", err)
 	}
 	scaledH := 0
@@ -418,6 +442,10 @@ func (t *FFmpegTranscoder) GenerateHoverPreview(ctx context.Context, inputPath, 
 	// Probe video to get total duration
 	info, err := ff.Probe(ctx, t.ffprobePath, inputPath)
 	if err != nil {
+		log.Error("ffprobe failed for hover preview",
+			"file", inputPath,
+			"error", err,
+		)
 		return fmt.Errorf("probe: %w", err)
 	}
 

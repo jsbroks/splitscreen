@@ -7,6 +7,7 @@ import (
 	"os/exec"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/charmbracelet/log"
@@ -251,6 +252,8 @@ func (c *Command) Run(ctx context.Context) error {
 
 	// Monitor progress in a goroutine
 	progressDone := make(chan struct{})
+	var stderrLines []string // Capture stderr for error reporting
+	var stderrMu sync.Mutex
 	go func() {
 		defer close(progressDone)
 		scanner := bufio.NewScanner(stderr)
@@ -262,6 +265,22 @@ func (c *Command) Run(ctx context.Context) error {
 
 		for scanner.Scan() {
 			line := scanner.Text()
+			
+			// Capture non-progress lines for error reporting
+			if !strings.HasPrefix(line, "out_time_ms=") && 
+			   !strings.HasPrefix(line, "speed=") && 
+			   !strings.HasPrefix(line, "progress=") &&
+			   !strings.HasPrefix(line, "total_size=") &&
+			   !strings.HasPrefix(line, "bitrate=") &&
+			   line != "" {
+				stderrMu.Lock()
+				// Keep last 20 lines to avoid memory bloat
+				if len(stderrLines) >= 20 {
+					stderrLines = stderrLines[1:]
+				}
+				stderrLines = append(stderrLines, line)
+				stderrMu.Unlock()
+			}
 
 			// Parse progress lines (format: key=value)
 			if strings.HasPrefix(line, "out_time_ms=") {
@@ -321,7 +340,16 @@ func (c *Command) Run(ctx context.Context) error {
 	// Wait for command to complete
 	if err := cmd.Wait(); err != nil {
 		<-progressDone // Wait for progress monitoring to finish
-		return fmt.Errorf("ffmpeg failed: %s\nargs: %s", c.bin, strings.Join(args, " "))
+		
+		// Include stderr output in error message for debugging
+		stderrMu.Lock()
+		errOutput := strings.Join(stderrLines, "\n")
+		stderrMu.Unlock()
+		
+		if errOutput != "" {
+			return fmt.Errorf("ffmpeg failed: %w\nstderr: %s\nargs: %s", err, errOutput, strings.Join(args, " "))
+		}
+		return fmt.Errorf("ffmpeg failed: %w\nargs: %s", err, strings.Join(args, " "))
 	}
 
 	<-progressDone // Wait for progress monitoring to finish
