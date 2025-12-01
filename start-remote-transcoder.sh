@@ -12,5 +12,13 @@ export FFPROBE_PATH="/opt/homebrew/bin/ffprobe"
 export WORKER_CONCURRENCY=1
 export MAX_PARALLEL_TASKS_PER_JOB=1
 export MAX_PARALLEL_RENDITIONS=1
+export KUBECONFIG=~/Git/portwaydev/portway/charts/ca-east.k3s.yaml
+
+
+# Port-forward remote postgres service in Kubernetes to local port 5499 (detach in background)
+# Specify the correct namespace. Replace <your-namespace> if needed.
+kubectl --kubeconfig="$KUBECONFIG" port-forward svc/db 5499:5432 -n portway-env-93f6c7a0-a2cb-4658-9419-80067701a42c &
+
+sleep 5
 
 (cd transcoder && go run main.go)

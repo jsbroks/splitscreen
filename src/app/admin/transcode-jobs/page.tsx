@@ -2,6 +2,7 @@
 
 import { formatDistanceToNow } from "date-fns";
 import Link from "next/link";
+import { parseAsStringEnum, useQueryState } from "nuqs";
 import { useState } from "react";
 import { toast } from "sonner";
 import { Badge } from "~/components/ui/badge";
@@ -29,7 +30,16 @@ type StatusFilter = "all" | "queued" | "running" | "done" | "failed";
 type QueueStatus = "queued" | "running" | "done" | "failed";
 
 export default function TranscodeJobsAdminPage() {
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
+  const [statusFilter, setStatusFilter] = useQueryState<StatusFilter>(
+    "status",
+    parseAsStringEnum([
+      "all",
+      "queued",
+      "running",
+      "done",
+      "failed",
+    ]).withDefault("all"),
+  );
   const [changeStatusDialogOpen, setChangeStatusDialogOpen] = useState(false);
   const [selectedJobId, setSelectedJobId] = useState<string | null>(null);
   const [newStatus, setNewStatus] = useState<QueueStatus>("queued");

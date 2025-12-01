@@ -9,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
@@ -16,6 +17,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/feature/s3/manager"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/aws/aws-sdk-go-v2/service/s3/types"
+	"github.com/charmbracelet/log"
 )
 
 // S3Options configures the S3Syncer.
@@ -70,7 +72,15 @@ func NewS3Syncer(ctx context.Context, opts S3Options) (*S3Syncer, error) {
 
 func (s *S3Syncer) SyncDirectory(ctx context.Context, localDir string, bucket string, prefix string) error {
 	root := filepath.Clean(localDir)
-	return filepath.WalkDir(root, func(path string, d os.DirEntry, err error) error {
+	
+	// Collect all files to upload
+	type fileTask struct {
+		localPath string
+		key       string
+	}
+	var tasks []fileTask
+	
+	err := filepath.WalkDir(root, func(path string, d os.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
@@ -82,8 +92,74 @@ func (s *S3Syncer) SyncDirectory(ctx context.Context, localDir string, bucket st
 			return err
 		}
 		key := joinKey(prefix, rel)
-		return s.uploadOne(ctx, path, bucket, key)
+		tasks = append(tasks, fileTask{localPath: path, key: key})
+		return nil
 	})
+	if err != nil {
+		return err
+	}
+	
+	if len(tasks) == 0 {
+		return nil
+	}
+	
+	log.Info("syncing directory", "files", len(tasks), "bucket", bucket, "prefix", prefix)
+	
+	// Upload files in parallel with concurrency limit
+	const maxConcurrency = 10
+	sem := make(chan struct{}, maxConcurrency)
+	errChan := make(chan error, len(tasks))
+	var wg sync.WaitGroup
+	
+	uploadedCount := 0
+	skippedCount := 0
+	var mu sync.Mutex
+	
+	for _, task := range tasks {
+		wg.Add(1)
+		sem <- struct{}{} // Acquire semaphore
+		
+		go func(t fileTask) {
+			defer wg.Done()
+			defer func() { <-sem }() // Release semaphore
+			
+			// Check if file already exists in S3
+			exists, err := s.FileExists(ctx, bucket, t.key)
+			if err != nil {
+				errChan <- fmt.Errorf("check exists %s: %w", t.key, err)
+				return
+			}
+			
+			if exists {
+				mu.Lock()
+				skippedCount++
+				mu.Unlock()
+				return // Skip upload
+			}
+			
+			// Upload the file
+			if err := s.uploadOne(ctx, t.localPath, bucket, t.key); err != nil {
+				errChan <- err
+				return
+			}
+			
+			mu.Lock()
+			uploadedCount++
+			mu.Unlock()
+		}(task)
+	}
+	
+	// Wait for all uploads to complete
+	wg.Wait()
+	close(errChan)
+	
+	// Check for errors
+	if err := <-errChan; err != nil {
+		return err
+	}
+	
+	log.Info("sync complete", "uploaded", uploadedCount, "skipped", skippedCount, "total", len(tasks))
+	return nil
 }
 
 func (s *S3Syncer) UploadFile(ctx context.Context, localPath string, bucket string, key string) error {
