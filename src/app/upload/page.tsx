@@ -16,6 +16,7 @@ import { Button } from "~/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
 import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
+import { Progress } from "~/components/ui/progress";
 import { Textarea } from "~/components/ui/textarea";
 
 import { api } from "~/trpc/react";
@@ -57,6 +58,11 @@ export default function UploadPage() {
     string[]
   >([]);
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  const [uploadProgress, setUploadProgress] = useState<{
+    video: number;
+    thumbnail: number;
+  }>({ video: 0, thumbnail: 0 });
+  const [isUploading, setIsUploading] = useState(false);
 
   // Create and cleanup thumbnail preview URL
   useEffect(() => {
@@ -121,6 +127,48 @@ export default function UploadPage() {
     onDrop: onDropThumb,
   });
 
+  // Helper function to upload a file with progress tracking
+  const uploadWithProgress = (
+    url: string,
+    file: File,
+    contentType: string,
+    progressType: "video" | "thumbnail",
+  ): Promise<void> => {
+    return new Promise((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+
+      xhr.upload.addEventListener("progress", (e) => {
+        if (e.lengthComputable) {
+          const percentComplete = Math.round((e.loaded / e.total) * 100);
+          setUploadProgress((prev) => ({
+            ...prev,
+            [progressType]: percentComplete,
+          }));
+        }
+      });
+
+      xhr.addEventListener("load", () => {
+        if (xhr.status >= 200 && xhr.status < 300) {
+          resolve();
+        } else {
+          reject(new Error(`Upload failed with status ${xhr.status}`));
+        }
+      });
+
+      xhr.addEventListener("error", () => {
+        reject(new Error("Upload failed"));
+      });
+
+      xhr.addEventListener("abort", () => {
+        reject(new Error("Upload aborted"));
+      });
+
+      xhr.open("PUT", url);
+      xhr.setRequestHeader("Content-Type", contentType);
+      xhr.send(file);
+    });
+  };
+
   const onSubmit = async (values: FormValues) => {
     try {
       if (!videoFile) {
@@ -135,6 +183,9 @@ export default function UploadPage() {
         );
         return;
       }
+
+      setIsUploading(true);
+      setUploadProgress({ video: 0, thumbnail: 0 });
 
       // Identify new creators that need to be created
       const existingCreatorIds = new Set(creators?.map((c) => c.id) ?? []);
@@ -208,29 +259,25 @@ export default function UploadPage() {
         tags: selectedTags.length > 0 ? selectedTags : undefined,
       });
 
-      // Upload video to S3
-      const videoPut = await fetch(sign.uploadUrl, {
-        method: "PUT",
-        headers: {
-          "Content-Type": videoFile.type || "application/octet-stream",
-        },
-        body: videoFile,
-      });
-      if (!videoPut.ok) {
-        throw new Error(`Video upload failed with ${videoPut.status}`);
-      }
+      // Upload video to S3 with progress tracking
+      await uploadWithProgress(
+        sign.uploadUrl,
+        videoFile,
+        videoFile.type || "application/octet-stream",
+        "video",
+      );
 
       // Upload thumbnail to S3 if provided
       if (thumbFile && sign.thumbnailUploadUrl) {
-        const thumbPut = await fetch(sign.thumbnailUploadUrl, {
-          method: "PUT",
-          headers: {
-            "Content-Type": thumbFile.type || "image/jpeg",
-          },
-          body: thumbFile,
-        });
-        if (!thumbPut.ok) {
-          console.error(`Thumbnail upload failed with ${thumbPut.status}`);
+        try {
+          await uploadWithProgress(
+            sign.thumbnailUploadUrl,
+            thumbFile,
+            thumbFile.type || "image/jpeg",
+            "thumbnail",
+          );
+        } catch (error) {
+          console.error("Thumbnail upload failed:", error);
           // Don't fail the entire upload if thumbnail fails
           toast.warning("Video uploaded but thumbnail upload failed");
         }
@@ -243,12 +290,15 @@ export default function UploadPage() {
       setSelectedCreator("");
       setSelectedFeaturedCreators([]);
       setSelectedTags([]);
+      setUploadProgress({ video: 0, thumbnail: 0 });
       // Navigate to the video page if it exists, else back to home
       router.push(`/video/${sign.videoId}`);
     } catch (e) {
       console.error(e);
       const message = e instanceof Error ? e.message : "Upload failed";
       toast.error(message);
+    } finally {
+      setIsUploading(false);
     }
   };
 
@@ -419,9 +469,40 @@ export default function UploadPage() {
                 </div>
               </div>
             </div>
+
+            {/* Upload Progress */}
+            {isUploading && (
+              <div className="space-y-3 rounded-lg border border-border bg-muted/50 p-4">
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="font-medium">Video Upload</span>
+                    <span className="text-muted-foreground">
+                      {uploadProgress.video}%
+                    </span>
+                  </div>
+                  <Progress value={uploadProgress.video} />
+                </div>
+                {thumbFile && (
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="font-medium">Thumbnail Upload</span>
+                      <span className="text-muted-foreground">
+                        {uploadProgress.thumbnail}%
+                      </span>
+                    </div>
+                    <Progress value={uploadProgress.thumbnail} />
+                  </div>
+                )}
+              </div>
+            )}
+
             <div className="pt-2">
-              <Button disabled={isSubmitting} type="submit">
-                {isSubmitting ? "Uploading..." : "Upload"}
+              <Button disabled={isSubmitting || isUploading} type="submit">
+                {isUploading
+                  ? "Uploading..."
+                  : isSubmitting
+                    ? "Processing..."
+                    : "Upload"}
               </Button>
             </div>
           </form>

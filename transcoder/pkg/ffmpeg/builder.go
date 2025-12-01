@@ -14,9 +14,11 @@ import (
 
 // Command provides a fluent API for building and running ffmpeg invocations.
 type Command struct {
-	bin     string
-	args    []string
-	filters []string
+	bin              string
+	args             []string
+	filters          []string
+	progressCallback func(percent float64, eta string, speed string)
+	totalDuration    float64 // in seconds, for progress calculation
 }
 
 func New(bin string) *Command {
@@ -184,79 +186,91 @@ func (c *Command) Output(path string) *Command {
 	return c
 }
 
+// WithProgress sets a callback for progress updates during encoding.
+// durationSeconds is the total video duration for calculating progress percentage.
+// The callback receives: percent (0-100), current position time, and encoding speed.
+func (c *Command) WithProgress(durationSeconds float64, callback func(percent float64, position string, speed string)) *Command {
+	c.totalDuration = durationSeconds
+	c.progressCallback = callback
+	return c
+}
+
 func (c *Command) buildArgs() []string {
 	// Find the output path (last added via Output())
 	// We need to insert filter args BEFORE the output path
 	var outputPath string
 	argsWithoutOutput := c.args
-	
+
 	// Check if we have args and the last one looks like an output path
 	// (doesn't start with -)
 	if len(c.args) > 0 && !strings.HasPrefix(c.args[len(c.args)-1], "-") {
 		outputPath = c.args[len(c.args)-1]
 		argsWithoutOutput = c.args[:len(c.args)-1]
 	}
-	
+
 	args := make([]string, 0, len(c.args)+2)
 	args = append(args, argsWithoutOutput...)
-	
+
 	// Add filters before output path
 	if len(c.filters) > 0 {
 		joined := strings.Join(c.filters, ",")
 		args = append(args, "-vf", joined)
 	}
-	
+
 	// Add output path last
 	if outputPath != "" {
 		args = append(args, outputPath)
 	}
-	
+
 	return args
 }
 
 func (c *Command) Run(ctx context.Context) error {
 	args := c.buildArgs()
-	
+
 	// Add progress reporting
 	args = append([]string{"-progress", "pipe:2", "-stats_period", "5"}, args...)
-	
+
 	cmd := exec.CommandContext(ctx, c.bin, args...)
-	
+
 	// Capture stderr for progress monitoring
 	stderr, err := cmd.StderrPipe()
 	if err != nil {
 		return fmt.Errorf("failed to create stderr pipe: %w", err)
 	}
-	
+
 	// Capture stdout for error messages
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
 		return fmt.Errorf("failed to create stdout pipe: %w", err)
 	}
-	
+
 	if err := cmd.Start(); err != nil {
 		return fmt.Errorf("ffmpeg failed to start: %s\nargs: %s", c.bin, strings.Join(args, " "))
 	}
-	
+
 	// Monitor progress in a goroutine
 	progressDone := make(chan struct{})
 	go func() {
 		defer close(progressDone)
 		scanner := bufio.NewScanner(stderr)
 		var lastTime string
+		var lastSpeed string
 		var lastLog time.Time
+		var currentTimeMicros int64
 		logInterval := 10 * time.Second
-		
+
 		for scanner.Scan() {
 			line := scanner.Text()
-			
+
 			// Parse progress lines (format: key=value)
 			if strings.HasPrefix(line, "out_time_ms=") {
-				// Extract timestamp
+				// Extract timestamp in microseconds
 				parts := strings.SplitN(line, "=", 2)
 				if len(parts) == 2 {
 					microseconds, parseErr := strconv.ParseInt(parts[1], 10, 64)
 					if parseErr == nil && microseconds > 0 {
+						currentTimeMicros = microseconds
 						// Convert to human-readable time
 						seconds := microseconds / 1000000
 						h := seconds / 3600
@@ -265,20 +279,37 @@ func (c *Command) Run(ctx context.Context) error {
 						lastTime = fmt.Sprintf("%02d:%02d:%02d", h, m, s)
 					}
 				}
+			} else if strings.HasPrefix(line, "speed=") {
+				// Extract speed (e.g., "1.5x")
+				parts := strings.SplitN(line, "=", 2)
+				if len(parts) == 2 {
+					lastSpeed = strings.TrimSpace(parts[1])
+				}
 			} else if strings.HasPrefix(line, "progress=") {
 				parts := strings.SplitN(line, "=", 2)
 				if len(parts) == 2 && parts[1] == "continue" && lastTime != "" {
-					// Log progress periodically
+					// Log or callback progress periodically
 					now := time.Now()
 					if now.Sub(lastLog) >= logInterval {
-						log.Info("ffmpeg progress", "position", lastTime)
+						if c.progressCallback != nil && c.totalDuration > 0 {
+							// Calculate percentage based on total duration
+							currentSeconds := float64(currentTimeMicros) / 1000000.0
+							percent := (currentSeconds / c.totalDuration) * 100.0
+							if percent > 100 {
+								percent = 100
+							}
+							c.progressCallback(percent, lastTime, lastSpeed)
+						} else {
+							// Fallback to generic logging
+							log.Info("ffmpeg progress", "position", lastTime, "speed", lastSpeed)
+						}
 						lastLog = now
 					}
 				}
 			}
 		}
 	}()
-	
+
 	// Consume stdout to prevent blocking
 	go func() {
 		scanner := bufio.NewScanner(stdout)
@@ -286,13 +317,13 @@ func (c *Command) Run(ctx context.Context) error {
 			// Just consume the output
 		}
 	}()
-	
+
 	// Wait for command to complete
 	if err := cmd.Wait(); err != nil {
 		<-progressDone // Wait for progress monitoring to finish
 		return fmt.Errorf("ffmpeg failed: %s\nargs: %s", c.bin, strings.Join(args, " "))
 	}
-	
+
 	<-progressDone // Wait for progress monitoring to finish
 	return nil
 }

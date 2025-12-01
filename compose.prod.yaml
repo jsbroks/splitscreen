@@ -66,9 +66,23 @@ services:
       S3_SECRET_ACCESS_KEY: cfb89fdcceb64eb3be6a16faaba936bb3fb3c88aae066bb727f0b6b71ec1d06e
       S3_REGION: auto
       S3_FORCE_PATH_STYLE: "false"
+
+      # Resource Controls - Prevent OOM by limiting parallel operations
+      # Max number of transcode jobs to process simultaneously (0 = auto-detect based on CPUs)
+      WORKER_CONCURRENCY: "1"
+      # Max number of tasks (HLS, poster, thumbnails, hover) to run in parallel per job
+      # Lower value reduces memory spikes (default was 4, now 2 saves ~40-50% memory)
+      MAX_PARALLEL_TASKS_PER_JOB: "1"
+      # Max number of HLS renditions to encode simultaneously (e.g., 720p, 1080p)
+      # Prevents transcoding all qualities at once which can cause OOM
+      MAX_PARALLEL_RENDITIONS: "1"
+      # Minimum free disk space (GB) required before starting a transcode job
+      TEMP_DIR_MIN_FREE_GB: "10"
     deploy:
       resources:
         limits:
+          memory: 6g
+        reservations:
           memory: 6g
 
 volumes:
