@@ -14,11 +14,47 @@ export MAX_PARALLEL_TASKS_PER_JOB=1
 export MAX_PARALLEL_RENDITIONS=1
 export KUBECONFIG=~/Git/portwaydev/portway/charts/ca-east.k3s.yaml
 
+NAMESPACE="portway-env-93f6c7a0-a2cb-4658-9419-80067701a42c"
 
-# Port-forward remote postgres service in Kubernetes to local port 5499 (detach in background)
-# Specify the correct namespace. Replace <your-namespace> if needed.
-kubectl --kubeconfig="$KUBECONFIG" port-forward svc/db 5499:5432 -n portway-env-93f6c7a0-a2cb-4658-9419-80067701a42c &
+# Function to start port-forward
+start_port_forward() {
+    echo "Starting port-forward..."
+    kubectl --kubeconfig="$KUBECONFIG" port-forward svc/db 5499:5432 -n "$NAMESPACE" &
+    PORT_FORWARD_PID=$!
+    echo "Port-forward started with PID: $PORT_FORWARD_PID"
+}
 
+# Function to monitor and restart port-forward
+monitor_port_forward() {
+    while true; do
+        if ! kill -0 $PORT_FORWARD_PID 2>/dev/null; then
+            echo "Port-forward died, restarting..."
+            start_port_forward
+            sleep 3
+        fi
+        sleep 5
+    done
+}
+
+# Start initial port-forward
+start_port_forward
+
+# Start monitoring in background
+monitor_port_forward &
+MONITOR_PID=$!
+
+# Cleanup function
+cleanup() {
+    echo "Cleaning up..."
+    kill $PORT_FORWARD_PID 2>/dev/null
+    kill $MONITOR_PID 2>/dev/null
+    exit
+}
+
+trap cleanup SIGINT SIGTERM
+
+# Wait for port-forward to establish
 sleep 5
 
+# Run transcoder
 (cd transcoder && go run main.go)
