@@ -7,6 +7,7 @@ import (
 	"math"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 	"time"
 	ff "transcoder/pkg/ffmpeg"
@@ -451,6 +452,12 @@ func (t *FFmpegTranscoder) GenerateHoverPreview(ctx context.Context, inputPath, 
 
 	// Calculate timestamps at 25%, 50%, and 75% of video duration
 	clipDurationSec := duration.Seconds()
+	
+	log.Info("calculating hover preview timestamps",
+		"video_duration_sec", info.DurationSec,
+		"clip_duration_sec", clipDurationSec,
+	)
+	
 	timestamps := []float64{
 		info.DurationSec * 0.25,
 		info.DurationSec * 0.50,
@@ -458,11 +465,25 @@ func (t *FFmpegTranscoder) GenerateHoverPreview(ctx context.Context, inputPath, 
 	}
 
 	// Ensure clips don't exceed video duration
+	var adjustments []string
 	for i, ts := range timestamps {
+		original := ts
 		if ts+clipDurationSec > info.DurationSec {
 			timestamps[i] = math.Max(0, info.DurationSec-clipDurationSec)
+			adjustments = append(adjustments, 
+				fmt.Sprintf("clip%d: %.3f->%.3f (would exceed duration)", i, original, timestamps[i]))
 		}
 	}
+	
+	if len(adjustments) > 0 {
+		log.Warn("adjusted hover preview timestamps", "adjustments", strings.Join(adjustments, "; "))
+	}
+	
+	log.Info("hover preview timestamps finalized",
+		"clip0_start", timestamps[0],
+		"clip1_start", timestamps[1],
+		"clip2_start", timestamps[2],
+	)
 
 	if outWebM != "" {
 		if err := os.MkdirAll(filepath.Dir(outWebM), 0o755); err != nil {
@@ -616,3 +637,4 @@ func defaultIfEmpty(s, def string) string {
 	}
 	return s
 }
+

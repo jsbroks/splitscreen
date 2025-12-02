@@ -630,9 +630,9 @@ func processJob(
 		err  error
 	}
 
-	taskCount := cfg.MaxParallelTasksPerJob
-	results := make(chan taskResult, taskCount)
-	taskSem := make(chan struct{}, taskCount) // Semaphore to limit concurrent tasks
+	const totalTasks = 4 // Total number of tasks: HLS, Hover, Scrubber, Poster
+	results := make(chan taskResult, totalTasks)
+	taskSem := make(chan struct{}, cfg.MaxParallelTasksPerJob) // Semaphore to limit concurrent tasks
 
 	// Task 1: HLS transcoding (usually the longest)
 	go func() {
@@ -662,21 +662,23 @@ func processJob(
 		err := t.TranscodeHLS(ctx, localInputPath, outputPath, renditions)
 		close(heartbeatDone)
 
+		if err != nil {
+			jobLogger.Error("HLS transcode FAILED - job will fail", "error", err, "duration", time.Since(taskStart).Truncate(time.Millisecond))
+			jobStatus.UpdateHLS(queue.ProcessingStatusFailed)
+			queue.UpdateHLSStatus(ctx, sqlDB, j.ID, queue.ProcessingStatusFailed)
+			results <- taskResult{"HLS transcode", err}
+			return
+		}
+
 		jobLogger.Info("HLS syncing directory")
 		s.SyncDirectory(ctx, outputPath, cfg.S3Bucket, j.OutputPrefix)
 		jobLogger.Info("HLS syncing directory complete")
+		
+		jobLogger.Info("HLS transcode complete", "duration", time.Since(taskStart).Truncate(time.Millisecond))
+		jobStatus.UpdateHLS(queue.ProcessingStatusDone)
+		queue.UpdateHLSStatus(ctx, sqlDB, j.ID, queue.ProcessingStatusDone)
 
-		if err != nil {
-			jobLogger.Error("transcode error", "error", err, "duration", time.Since(taskStart).Truncate(time.Millisecond))
-			jobStatus.UpdateHLS(queue.ProcessingStatusFailed)
-			queue.UpdateHLSStatus(ctx, sqlDB, j.ID, queue.ProcessingStatusFailed)
-		} else {
-			jobLogger.Info("HLS transcode complete", "duration", time.Since(taskStart).Truncate(time.Millisecond))
-			jobStatus.UpdateHLS(queue.ProcessingStatusDone)
-			queue.UpdateHLSStatus(ctx, sqlDB, j.ID, queue.ProcessingStatusDone)
-		}
-
-		results <- taskResult{"HLS transcode", err}
+		results <- taskResult{"HLS transcode", nil}
 	}()
 
 	// Task 2: Hover preview generation
@@ -694,21 +696,23 @@ func processJob(
 			720, 24,
 		)
 
+		if err != nil {
+			jobLogger.Error("hover preview FAILED - job will fail", "error", err, "duration", time.Since(taskStart).Truncate(time.Millisecond))
+			jobStatus.UpdateHover(queue.ProcessingStatusFailed)
+			queue.UpdateHoverPreviewStatus(ctx, sqlDB, j.ID, queue.ProcessingStatusFailed)
+			results <- taskResult{"hover preview", err}
+			return
+		}
+
 		jobLogger.Info("hover preview syncing directory")
 		s.SyncDirectory(ctx, outputPath, cfg.S3Bucket, j.OutputPrefix)
 		jobLogger.Info("hover preview syncing directory complete")
+		
+		jobLogger.Info("hover preview complete", "duration", time.Since(taskStart).Truncate(time.Millisecond))
+		jobStatus.UpdateHover(queue.ProcessingStatusDone)
+		queue.UpdateHoverPreviewStatus(ctx, sqlDB, j.ID, queue.ProcessingStatusDone)
 
-		if err != nil {
-			jobLogger.Error("generate hover preview error", "error", err, "duration", time.Since(taskStart).Truncate(time.Millisecond))
-			jobStatus.UpdateHover(queue.ProcessingStatusFailed)
-			queue.UpdateHoverPreviewStatus(ctx, sqlDB, j.ID, queue.ProcessingStatusFailed)
-		} else {
-			jobLogger.Info("hover preview complete", "duration", time.Since(taskStart).Truncate(time.Millisecond))
-			jobStatus.UpdateHover(queue.ProcessingStatusDone)
-			queue.UpdateHoverPreviewStatus(ctx, sqlDB, j.ID, queue.ProcessingStatusDone)
-		}
-
-		results <- taskResult{"hover preview", err}
+		results <- taskResult{"hover preview", nil}
 	}()
 
 	// Task 3: Thumbnail and VTT generation
@@ -728,21 +732,23 @@ func processJob(
 			100, // Maximum number of thumbnails (will be less for shorter videos)
 		)
 
+		if err != nil {
+			jobLogger.Error("thumbnails and VTT FAILED - job will fail", "error", err, "duration", time.Since(taskStart).Truncate(time.Millisecond))
+			jobStatus.UpdateScrubber(queue.ProcessingStatusFailed)
+			queue.UpdateScrubberPreviewStatus(ctx, sqlDB, j.ID, queue.ProcessingStatusFailed)
+			results <- taskResult{"thumbnails and VTT", err}
+			return
+		}
+
 		jobLogger.Info("thumbnails and VTT syncing directory")
 		s.SyncDirectory(ctx, outputPath, cfg.S3Bucket, j.OutputPrefix)
 		jobLogger.Info("thumbnails and VTT syncing directory complete")
+		
+		jobLogger.Info("thumbnails and VTT complete", "duration", time.Since(taskStart).Truncate(time.Millisecond))
+		jobStatus.UpdateScrubber(queue.ProcessingStatusDone)
+		queue.UpdateScrubberPreviewStatus(ctx, sqlDB, j.ID, queue.ProcessingStatusDone)
 
-		if err != nil {
-			jobLogger.Error("generate thumbnails and vtt error", "error", err, "duration", time.Since(taskStart).Truncate(time.Millisecond))
-			jobStatus.UpdateScrubber(queue.ProcessingStatusFailed)
-			queue.UpdateScrubberPreviewStatus(ctx, sqlDB, j.ID, queue.ProcessingStatusFailed)
-		} else {
-			jobLogger.Info("thumbnails and VTT complete", "duration", time.Since(taskStart).Truncate(time.Millisecond))
-			jobStatus.UpdateScrubber(queue.ProcessingStatusDone)
-			queue.UpdateScrubberPreviewStatus(ctx, sqlDB, j.ID, queue.ProcessingStatusDone)
-		}
-
-		results <- taskResult{"thumbnails and VTT", err}
+		results <- taskResult{"thumbnails and VTT", nil}
 	}()
 
 	// Generate a thumbnail at 25% of the video's duration
@@ -756,7 +762,7 @@ func processJob(
 		// Probe video info to get duration
 		info, err := t.ProbeVideo(ctx, localInputPath)
 		if err != nil {
-			jobLogger.Error("failed to probe video for 25pct thumbnail", "error", err, "duration", time.Since(taskStart).Truncate(time.Millisecond))
+			jobLogger.Error("failed to probe video for 25pct thumbnail - job will fail", "error", err, "duration", time.Since(taskStart).Truncate(time.Millisecond))
 			jobStatus.UpdatePoster(queue.ProcessingStatusFailed)
 			queue.UpdatePosterStatus(ctx, sqlDB, j.ID, queue.ProcessingStatusFailed)
 			results <- taskResult{"25pct thumbnail", err}
@@ -765,36 +771,50 @@ func processJob(
 		thumbTime := time.Duration(info.DurationSec * 0.25 * float64(time.Second)) // 25% point
 		thumbPath := filepath.Join(outputPath, "thumb_25pct.jpg")
 		err = t.GeneratePoster(ctx, localInputPath, thumbPath, thumbTime, 480)
+	
+		if err != nil {
+			jobLogger.Error("25pct thumbnail FAILED - job will fail", "error", err, "duration", time.Since(taskStart).Truncate(time.Millisecond))
+			jobStatus.UpdatePoster(queue.ProcessingStatusFailed)
+			queue.UpdatePosterStatus(ctx, sqlDB, j.ID, queue.ProcessingStatusFailed)
+			results <- taskResult{"25pct thumbnail", err}
+			return
+		}
 
 		jobLogger.Info("25pct thumbnail syncing directory")
 		s.SyncDirectory(ctx, outputPath, cfg.S3Bucket, j.OutputPrefix)
 		jobLogger.Info("25pct thumbnail syncing directory complete")
-	
-		if err != nil {
-			jobLogger.Error("generate 25pct thumbnail error", "error", err, "duration", time.Since(taskStart).Truncate(time.Millisecond))
-			jobStatus.UpdatePoster(queue.ProcessingStatusFailed)
-			queue.UpdatePosterStatus(ctx, sqlDB, j.ID, queue.ProcessingStatusFailed)
-		} else {
-			jobLogger.Info("25pct thumbnail complete", "path", thumbPath, "duration", time.Since(taskStart).Truncate(time.Millisecond))
-			jobStatus.UpdatePoster(queue.ProcessingStatusDone)
-			queue.UpdatePosterStatus(ctx, sqlDB, j.ID, queue.ProcessingStatusDone)
-		}
+		
+		jobLogger.Info("25pct thumbnail complete", "path", thumbPath, "duration", time.Since(taskStart).Truncate(time.Millisecond))
+		jobStatus.UpdatePoster(queue.ProcessingStatusDone)
+		queue.UpdatePosterStatus(ctx, sqlDB, j.ID, queue.ProcessingStatusDone)
 
-		results <- taskResult{"25pct thumbnail", err}
+		results <- taskResult{"25pct thumbnail", nil}
 	}()
 
 	// Wait for all tasks to complete and collect errors
 	var taskErrors []error
-	for range taskCount {
+	var failedTasks []string
+	for range totalTasks {
 		result := <-results
 		if result.err != nil {
 			taskErrors = append(taskErrors, fmt.Errorf("%s: %w", result.name, result.err))
+			failedTasks = append(failedTasks, result.name)
 		}
 	}
 
-	// If any task failed, mark video as failed and return the first error
+	// If any task failed, the entire job fails
 	if len(taskErrors) > 0 {
-		jobLogger.Error("one or more transcoding tasks failed", "errors", len(taskErrors))
+		jobLogger.Error("========================================")
+		jobLogger.Error("JOB FAILED - one or more tasks failed", 
+			"failed_tasks", failedTasks,
+			"total_failures", len(taskErrors),
+			"duration", time.Since(start).Truncate(time.Millisecond),
+		)
+		jobLogger.Error("========================================")
+		// Log each individual failure
+		for _, err := range taskErrors {
+			jobLogger.Error("task failure", "error", err)
+		}
 		return taskErrors[0]
 	}
 
